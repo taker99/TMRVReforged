@@ -13,6 +13,7 @@
 		"FluidEmiStackMixin",
 		"FullTypedItemStackMixin",
 		"ItemEmiStackMixin",
+		"JemiRecipeHandlerMixin",
 		"JemiUtilMixin",
 		"MekanismJEIMixin",
 		"NormalizedTypedItemMixin",
