@@ -3,8 +3,12 @@ package dev.nolij.toomanyrecipeviewers.impl.widget;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.Widget;
 import mezz.jei.api.gui.placement.IPlaceable;
+import mezz.jei.api.gui.placement.HorizontalAlignment;
+import mezz.jei.api.gui.placement.VerticalAlignment;
 import mezz.jei.common.Internal;
 import mezz.jei.common.util.ImmutableRect2i;
+//? if >=21.1
+import mezz.jei.common.util.PlaceableUtil;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 
@@ -73,6 +77,13 @@ public class ScrollBarWidget extends Widget implements IPlaceable<ScrollBarWidge
 		setRect(rect.setPosition(x, y));
 		return this;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public ScrollBarWidget setPosition(int x, int y, int width, int height, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment) {
+		return PlaceableUtil.setPosition(this, x, y, width, height, horizontalAlignment, verticalAlignment);
+	}
+	//?}
 	
 	@Override
 	public int getWidth() {

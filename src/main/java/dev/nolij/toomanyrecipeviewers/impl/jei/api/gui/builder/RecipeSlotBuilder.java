@@ -15,11 +15,15 @@ import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.TilingDirection;
 import mezz.jei.api.gui.ingredient.IRecipeSlotRichTooltipCallback;
+import mezz.jei.api.gui.placement.HorizontalAlignment;
+import mezz.jei.api.gui.placement.VerticalAlignment;
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.common.util.ImmutableRect2i;
+//? if >=21.1
+import mezz.jei.common.util.PlaceableUtil;
 import mezz.jei.library.gui.recipes.layout.builder.LegacyTooltipCallbackAdapter;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.world.level.material.Fluid;
@@ -201,6 +205,13 @@ public class RecipeSlotBuilder implements IRecipeSlotBuilder {
 		this.rect = this.rect.setPosition(x, y);
 		return this;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public IRecipeSlotBuilder setPosition(int x, int y, int width, int height, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment) {
+		return PlaceableUtil.setPosition(this, x, y, width, height, horizontalAlignment, verticalAlignment);
+	}
+	//?}
 	
 	@Override
 	public int getWidth() {

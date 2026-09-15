@@ -6,6 +6,7 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.ItemEmiStack;
 import dev.nolij.toomanyrecipeviewers.util.IItemStackish;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import net.minecraft.core.component.DataComponentPatch;
@@ -39,6 +40,13 @@ public abstract class ItemEmiStackMixin implements ITypedIngredient<ItemStack>, 
 	public ItemStack getIngredient() {
 		return ((ItemEmiStack) (Object) this).getItemStack();
 	}
+
+	//? if >=21.1 {
+	@Override
+	public ITypedIngredient<ItemStack> normalize(IIngredientHelper<ItemStack> ingredientHelper) {
+		return (ITypedIngredient<ItemStack>) tmrv$normalize();
+	}
+	//?}
 	
 	//? if >=21.1 {
 	@Override

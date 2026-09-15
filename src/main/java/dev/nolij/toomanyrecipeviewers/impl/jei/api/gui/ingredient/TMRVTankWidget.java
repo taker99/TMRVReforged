@@ -17,6 +17,7 @@ import mezz.jei.common.util.ImmutableRect2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -173,6 +174,20 @@ public class TMRVTankWidget extends TankWidget implements ITMRVRecipeSlotDrawabl
 	public Optional<ITypedIngredient<?>> getDisplayedIngredient() {
 		return getAllIngredients().findFirst();
 	}
+
+	//? if >=21.1 {
+	@Override
+	public Stream<ITypedIngredient<?>> getDisplayedIngredients() {
+		return getDisplayedIngredient().stream();
+	}
+	//?}
+
+	//? if >=21.1 {
+	@Override
+	public Optional<TagKey<?>> getTagKey() {
+		return TMRVSlotWidget.getTagKey(ingredientManager, getAllIngredientsList());
+	}
+	//?}
 	
 	@Override
 	public RecipeIngredientRole getRole() {

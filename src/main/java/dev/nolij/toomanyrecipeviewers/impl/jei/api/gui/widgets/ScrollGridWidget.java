@@ -5,8 +5,12 @@ import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.ingredient.ITMRVSlotWidge
 import dev.nolij.toomanyrecipeviewers.impl.widget.ScrollBarWidget;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
+import mezz.jei.api.gui.placement.HorizontalAlignment;
+import mezz.jei.api.gui.placement.VerticalAlignment;
 import mezz.jei.api.gui.widgets.IScrollGridWidget;
 import mezz.jei.common.util.ImmutableRect2i;
+//? if >=21.1
+import mezz.jei.common.util.PlaceableUtil;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import org.jetbrains.annotations.Nullable;
@@ -80,6 +84,13 @@ public class ScrollGridWidget implements IScrollGridWidget {
 		updateGrid();
 		return this;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public IScrollGridWidget setPosition(int x, int y, int width, int height, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment) {
+		return PlaceableUtil.setPosition(this, x, y, width, height, horizontalAlignment, verticalAlignment);
+	}
+	//?}
 	
 	@Override
 	public int getWidth() {

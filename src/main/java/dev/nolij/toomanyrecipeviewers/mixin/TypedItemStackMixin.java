@@ -4,7 +4,10 @@ package dev.nolij.toomanyrecipeviewers.mixin;
 import net.minecraft.world.item.Item;
 //?}
 import dev.nolij.toomanyrecipeviewers.util.IItemStackish;
-import mezz.jei.library.ingredients.itemStacks.TypedItemStack;
+//? if >=21.1
+import mezz.jei.common.ingredients.itemStacks.TypedItemStack;
+//? if <21.1
+//import mezz.jei.library.ingredients.itemStacks.TypedItemStack;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,8 +28,9 @@ public abstract class TypedItemStackMixin implements IItemStackish<TypedItemStac
 	}
 	//?}
 	
-	@Shadow protected abstract TypedItemStack getNormalized();
-	
+	//? if <21.1 {
+	/*@Shadow protected abstract TypedItemStack getNormalized();
+
 	@Inject(method = "normalize", at = @At("HEAD"), cancellable = true)
 	private static void tmrv$normalize$HEAD(ITypedIngredient<ItemStack> typedIngredient, CallbackInfoReturnable<ITypedIngredient<ItemStack>> cir) {
 		if (typedIngredient instanceof IItemStackish<?> itemStackish) {
@@ -34,10 +38,14 @@ public abstract class TypedItemStackMixin implements IItemStackish<TypedItemStac
 			cir.setReturnValue((ITypedIngredient<ItemStack>) itemStackish.tmrv$normalize());
 		}
 	}
+	*///?}
 	
 	@Override
 	public TypedItemStack tmrv$normalize() {
-		return getNormalized();
+		//? if >=21.1
+		return ((TypedItemStack) (Object) this).normalize(dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers.runtime.itemStackHelper);
+		//? if <21.1
+		//return getNormalized();
 	}
 	
 }

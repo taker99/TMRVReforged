@@ -109,6 +109,11 @@ public class ClientConfig implements IClientConfig {
 	public IJeiConfigValue<Boolean> catchRenderErrorsEnabled() {
 		return new JEIConfigValue<>(false);
 	}
+
+	@Override
+	public IJeiConfigValue<Boolean> recipeSyncWarningEnabled() {
+		return new JEIConfigValue<>(true);
+	}
 	
 	@Override
 	public IJeiConfigValue<Boolean> lookupFluidContentsEnabled() {
@@ -133,6 +138,11 @@ public class ClientConfig implements IClientConfig {
 	@Override
 	public IJeiConfigValue<Integer> smoothScrollRate() {
 		return new JEIConfigValue<>(0);
+	}
+
+	@Override
+	public IJeiConfigValue<Boolean> recipeSlotCyclingEnabled() {
+		return new JEIConfigValue<>(true);
 	}
 	
 	@Override

@@ -5,7 +5,10 @@ import mezz.jei.api.ingredients.IIngredientRenderer;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.ingredients.subtypes.UidContext;
-import mezz.jei.library.ingredients.TypedIngredient;
+//? if >=21.1
+import mezz.jei.common.ingredients.TypedIngredient;
+//? if <21.1
+//import mezz.jei.library.ingredients.TypedIngredient;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;

@@ -8,6 +8,7 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.FluidEmiStack;
 import dev.nolij.toomanyrecipeviewers.util.IFluidStackish;
 import mezz.jei.api.ingredients.IIngredientType;
+import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.world.level.material.Fluid;
@@ -44,6 +45,13 @@ public abstract class FluidEmiStackMixin implements ITypedIngredient<FluidStack>
 		//?} else
 		//return (FluidStack) fluidHelper.create(fluid, tmrv$getAmount(), nbt);
 	}
+
+	//? if >=21.1 {
+	@Override
+	public ITypedIngredient<FluidStack> normalize(IIngredientHelper<FluidStack> ingredientHelper) {
+		return (ITypedIngredient<FluidStack>) tmrv$normalize();
+	}
+	//?}
 	
 	//? if >=21.1 {
 	@Override

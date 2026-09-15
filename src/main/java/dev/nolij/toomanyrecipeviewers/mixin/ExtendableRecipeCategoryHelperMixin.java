@@ -13,9 +13,11 @@ import java.util.Optional;
 import dev.nolij.toomanyrecipeviewers.util.ITMRVExtendableRecipeCategoryHelper;
 import mezz.jei.api.recipe.category.extensions.IRecipeCategoryExtension;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 
 //? if >=21.1
 @SuppressWarnings("rawtypes")
+@Pseudo
 @Mixin(targets = "mezz/jei/library/recipes/ExtendableRecipeCategoryHelper", remap = false)
 public abstract class ExtendableRecipeCategoryHelperMixin<T, W extends IRecipeCategoryExtension> implements ITMRVExtendableRecipeCategoryHelper<T, W> {
 	

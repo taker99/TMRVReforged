@@ -1,6 +1,10 @@
 package dev.nolij.toomanyrecipeviewers.impl.widget;
 
 import mezz.jei.api.gui.placement.IPlaceable;
+import mezz.jei.api.gui.placement.HorizontalAlignment;
+import mezz.jei.api.gui.placement.VerticalAlignment;
+//? if >=21.1
+import mezz.jei.common.util.PlaceableUtil;
 
 public class DeferredPlaceableWidget implements IPlaceable<DeferredPlaceableWidget> {
 	
@@ -29,6 +33,13 @@ public class DeferredPlaceableWidget implements IPlaceable<DeferredPlaceableWidg
 		callback.setPosition(x, y);
 		return this;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public DeferredPlaceableWidget setPosition(int x, int y, int width, int height, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment) {
+		return PlaceableUtil.setPosition(this, x, y, width, height, horizontalAlignment, verticalAlignment);
+	}
+	//?}
 	
 	@Override
 	public int getWidth() {

@@ -6,10 +6,14 @@ import dev.emi.emi.runtime.EmiDrawContext;
 import mezz.jei.api.gui.placement.HorizontalAlignment;
 import mezz.jei.api.gui.placement.VerticalAlignment;
 import mezz.jei.api.gui.widgets.ITextWidget;
+//? if >=21.1
+import mezz.jei.api.gui.widgets.IRecipeWidgetTooltipCallback;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 
+import java.util.Collection;
 import java.util.List;
 
 public class TextWidget extends Widget implements ITextWidget {
@@ -25,6 +29,38 @@ public class TextWidget extends Widget implements ITextWidget {
 		delegate.setPosition(x, y);
 		return this;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public ITextWidget setPosition(int x, int y, int width, int height, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment) {
+		delegate.setPosition(x, y, width, height, horizontalAlignment, verticalAlignment);
+		return this;
+	}
+
+	@Override
+	public ITextWidget setTooltip(FormattedText tooltip) {
+		delegate.setTooltip(tooltip);
+		return this;
+	}
+
+	@Override
+	public ITextWidget setTooltip(Collection<? extends FormattedText> tooltip) {
+		delegate.setTooltip(tooltip);
+		return this;
+	}
+
+	@Override
+	public ITextWidget setTooltip(TooltipComponent tooltip) {
+		delegate.setTooltip(tooltip);
+		return this;
+	}
+
+	@Override
+	public ITextWidget setTooltip(IRecipeWidgetTooltipCallback tooltipCallback) {
+		delegate.setTooltip(tooltipCallback);
+		return this;
+	}
+	//?}
 	
 	@Override
 	public int getWidth() {

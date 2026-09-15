@@ -115,6 +115,8 @@ public class JEIKeyMappings implements IInternalKeyMappings {
 	private final IJeiKeyMappingInternal toggleVisibility = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.toggleVisibility);
 	private final IJeiKeyMappingInternal focusSearch = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.focusSearch);
 	private final IJeiKeyMappingInternal back = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.back);
+	//? if >=21.1
+	private final IJeiKeyMappingInternal forward = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.forward);
 	private final IJeiKeyMappingInternal viewRecipes = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.viewRecipes);
 	private final IJeiKeyMappingInternal viewUses = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.viewUses);
 	private final IJeiKeyMappingInternal cheatOneToInventory = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.cheatOneToInventory);
@@ -149,6 +151,13 @@ public class JEIKeyMappings implements IInternalKeyMappings {
 	public IJeiKeyMapping getRecipeBack() {
 		return back;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public IJeiKeyMapping getRecipeForward() {
+		return forward;
+	}
+	//?}
 	
 	@Override
 	public IJeiKeyMapping getPreviousCategory() {

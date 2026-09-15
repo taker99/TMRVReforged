@@ -2,7 +2,10 @@ package dev.nolij.toomanyrecipeviewers.mixin;
 
 import dev.nolij.toomanyrecipeviewers.impl.ingredient.TMRVStack;
 import mezz.jei.api.ingredients.IIngredientType;
+import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.ITypedIngredient;
+//? if >=21.1
+import mezz.jei.common.ingredients.TypedIngredient;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,6 +29,13 @@ public class TMRVStackMixin<T> implements ITypedIngredient<T> {
 	public T getIngredient() {
 		return ingredient;
 	}
+
+	//? if >=21.1 {
+	@Override
+	public ITypedIngredient<T> normalize(IIngredientHelper<T> ingredientHelper) {
+		return TypedIngredient.createUnvalidated(type, ingredientHelper.normalizeIngredient(ingredient));
+	}
+	//?}
 	
 	@Override
 	public @Nullable <V> ITypedIngredient<V> cast(IIngredientType<V> otherType) {

@@ -22,6 +22,7 @@ import mezz.jei.common.util.ImmutableRect2i;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.tags.TagKey;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -222,6 +223,38 @@ public class TMRVSlotWidget extends SlotWidget implements ITMRVRecipeSlotDrawabl
 	public Optional<ITypedIngredient<?>> getDisplayedIngredient() {
 		return getAllIngredients().findFirst();
 	}
+
+	//? if >=21.1 {
+	@Override
+	public Stream<ITypedIngredient<?>> getDisplayedIngredients() {
+		return getDisplayedIngredient().stream();
+	}
+	//?}
+
+	//? if >=21.1 {
+	@Override
+	public Optional<TagKey<?>> getTagKey() {
+		return getTagKey(ingredientManager, getAllIngredientsList());
+	}
+
+	static Optional<TagKey<?>> getTagKey(IngredientManager ingredientManager, List<@Nullable ITypedIngredient<?>> ingredients) {
+		return ingredients.stream()
+			.filter(java.util.Objects::nonNull)
+			.findFirst()
+			.flatMap(first -> getTagKey(ingredientManager, ingredients, first));
+	}
+
+	private static <T> Optional<TagKey<?>> getTagKey(IngredientManager ingredientManager, List<@Nullable ITypedIngredient<?>> ingredients, ITypedIngredient<T> first) {
+		final var type = first.getType();
+		final var values = ingredients.stream()
+			.map(ingredient -> ingredient == null ? Optional.<T>empty() : ingredient.getIngredient(type))
+			.flatMap(Optional::stream)
+			.toList();
+		if (values.size() != ingredients.size())
+			return Optional.empty();
+		return ingredientManager.getIngredientHelper(type).getTagKeyEquivalent(values);
+	}
+	//?}
 	
 	@Override
 	public RecipeIngredientRole getRole() {
