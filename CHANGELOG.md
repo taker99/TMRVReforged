@@ -1,1 +1,2 @@
 - further improvements to overall system stability and other minor adjustments have been made to enhance the user experience
+- Skip flowing fluid variants in recipe ingredient tags instead of displaying error placeholders; source fluids remain available.

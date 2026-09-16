@@ -3,6 +3,7 @@ package dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.builder;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.FluidEmiStack;
+import dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers;
 import dev.nolij.toomanyrecipeviewers.impl.ingredient.TMRVStack;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
 import dev.nolij.toomanyrecipeviewers.impl.ingredient.ErrorIngredient;
@@ -13,6 +14,7 @@ import mezz.jei.api.gui.builder.IIngredientConsumer;
 import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.IIngredientRenderer;
 import mezz.jei.api.ingredients.IIngredientType;
+import mezz.jei.api.ingredients.IIngredientTypeWithSubtypes;
 import mezz.jei.api.ingredients.ITypedIngredient;
 //? if >=21.1 {
 import mezz.jei.common.ingredients.TypedIngredient;
@@ -25,6 +27,7 @@ import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FlowingFluid;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -93,6 +96,14 @@ public class TMRVIngredientCollector implements IIngredientAcceptor<TMRVIngredie
 	//region IIngredientAcceptor
 	@Override
 	public <I> TMRVIngredientCollector addIngredient(IIngredientType<I> type, I ingredient) {
+		final var fluidType = TooManyRecipeViewers.fluidHelper.getFluidIngredientType();
+		if (type == fluidType && fluidType.getIngredientClass().isInstance(ingredient)) {
+			final var fluid = ((IIngredientTypeWithSubtypes<Fluid, I>) fluidType).getBase(ingredient);
+			// Fluid tags include flowing variants, which JEI excludes from recipe ingredients.
+			if (fluid instanceof FlowingFluid flowingFluid && !flowingFluid.isSource(flowingFluid.defaultFluidState()))
+				return this;
+		}
+
 		if (type == VanillaTypes.ITEM_STACK) {
 			if (ingredient instanceof ItemStack itemStack)
 				collectedIngredients.add(TypedItemStack.create(itemStack));
