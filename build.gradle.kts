@@ -34,7 +34,13 @@ val modLoader = ModLoader.get("mod_loader"()) ?: error("Invalid `mod_loader`!")
 val javaVersion = JavaVersion.valueOf("java_version"())
 
 project.group = "maven_group"()
-project.version = tau.versioning.subVersion("mc.${minecraftVersion.conciseName}")
+// `mod_version_exact` pins the version verbatim for local fork builds; without it the version is
+// derived from the release tags as before.
+// Derive first regardless: this initializes the version state the publishing block below reads.
+val derivedVersion = tau.versioning.subVersion("mc.${minecraftVersion.conciseName}")
+project.version = (rootProject.properties["mod_version_exact"] as? String)
+	?.let { "$it+mc.${minecraftVersion.conciseName}" }
+	?: derivedVersion
 
 println("TooManyRecipeViewers version: ${project.version}")
 
@@ -103,7 +109,7 @@ tasks.withType<JavaCompile> {
 
 tasks.processResources {
 	inputs.file(rootDir.resolve("gradle.properties"))
-	inputs.property("version", tau.versioning.version)
+	inputs.property("version", project.version.toString())
 	inputs.property("mod_loader", modLoader.commonName)
 
 	filteringCharset = "UTF-8"
@@ -112,7 +118,8 @@ tasks.processResources {
 	props.putAll(project.properties
 		.filterValues { value -> value is String }
 		.mapValues { entry -> entry.value as String })
-	props["mod_version"] = tau.versioning.version
+	// Honours `mod_version_exact` because project.version already resolved it above.
+	props["mod_version"] = project.version.toString()
 	props["mod_loader"] = modLoader.commonName
 	props["mixin_java_version"] = (project.properties["java_version"] as String).replace("VERSION_", "")
 

@@ -173,7 +173,11 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 	private final Set<EmiRecipe> replacementRecipes = Collections.synchronizedSet(new ReferenceOpenHashSet<>());
 	
 	private final Map<Object, Plugin> modRecipeCategoryExtensions = Collections.synchronizedMap(new Reference2ReferenceOpenHashMap<>());
-	
+
+	// EMI's recipe list is a plain ArrayList with no synchronization of its own, so parallel
+	// `registerRecipes` dispatch can drop recipes on the floor. Serialize our writes into it.
+	private final Object emiRegistryLock = new Object();
+
 	private final IngredientManager ingredientManager;
 	private final IIngredientVisibility ingredientVisibility;
 	
@@ -498,7 +502,9 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			final var recipe = category.recipe(jeiRecipe);
 			recipe.setPlugin(plugin);
 			final var emiRecipe = Objects.requireNonNull(recipe.getEMIRecipe());
-			registry.addRecipe(emiRecipe);
+			synchronized (emiRegistryLock) {
+				registry.addRecipe(emiRecipe);
+			}
 			if (vanillaJEITypeEMICategoryMap.containsKey(jeiRecipeType) && 
 				!(emiRecipe instanceof ExtendedRecipe<?>)) {
 				final var originalID = recipe.getOriginalID();
@@ -1063,7 +1069,9 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 	private final Map<RecipeType<?>, Category<?>> jeiRecipeTypeMap = Collections.synchronizedMap(new Object2ReferenceOpenHashMap<>());
 	private final Map<EmiRecipeCategory, Category<?>> emiCategoryMap = Collections.synchronizedMap(new Reference2ReferenceOpenHashMap<>());
 	
-	public <T> Category<T> category(
+	// Both maps are looked up and then written, so parallel dispatch could otherwise build two
+	// Category instances for the same type and split that type's recipes across them.
+	public synchronized <T> Category<T> category(
 		@Nullable IRecipeCategory<T> jeiCategory,
 		@Nullable RecipeType<T> jeiRecipeType,
 		@Nullable EmiRecipeCategory emiCategory
@@ -1181,7 +1189,8 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 		private final Map<T, Recipe> jeiRecipeMap = Collections.synchronizedMap(new Reference2ReferenceOpenHashMap<>());
 		private final Map<EmiRecipe, Recipe> emiRecipeMap = Collections.synchronizedMap(new Reference2ReferenceOpenHashMap<>());
 		
-		public Recipe recipe(@Nullable T jeiRecipe, @Nullable EmiRecipe emiRecipe) {
+		// Same lookup-then-write pattern as `category`, reached concurrently from `addRecipes`.
+		public synchronized Recipe recipe(@Nullable T jeiRecipe, @Nullable EmiRecipe emiRecipe) {
 			if (jeiRecipe == null && emiRecipe == null)
 				throw new IllegalArgumentException();
 			
