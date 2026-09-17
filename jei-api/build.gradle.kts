@@ -55,14 +55,15 @@ dependencies {
 
 val minecraftVersion = MinecraftVersion.get("minecraft_version"()) ?: error("Invalid `minecraft_version`!")
 val modLoader = ModLoader.get("mod_loader"()) ?: error("Invalid `mod_loader`!")
+val javaVersion = JavaVersion.valueOf("jei_api_java_version"())
 
 tasks.withType<JavaCompile> {
 	if (name !in arrayOf("compileMcLauncherJava", "compilePatchedMcJava")) {
 		options.encoding = "UTF-8"
-		sourceCompatibility = "21"
-		options.release = 21
+		sourceCompatibility = javaVersion.majorVersion
+		options.release = javaVersion.majorVersion.toInt()
 		javaCompiler = javaToolchains.compilerFor {
-			languageVersion = JavaLanguageVersion.of(21)
+			languageVersion = JavaLanguageVersion.of(javaVersion.majorVersion.toInt())
 		}
 		options.compilerArgs.addAll(arrayOf("-Xplugin:Manifold no-bootstrap"))
 		options.forkOptions.jvmArgs?.add("-XX:+EnableDynamicAgentLoading")
@@ -79,7 +80,7 @@ tasks.processResources {
 	props.putAll(project.properties
 		.filterValues { value -> value is String }
 		.mapValues { entry -> entry.value as String })
-	props["mod_version"] = project.version as String
+	props["mod_version"] = project.version.toString()
 
 	filesMatching(listOf("fabric.mod.json", "mcmod.info", "META-INF/mods.toml", "META-INF/neoforge.mods.toml")) {
 		expand(props)

@@ -4,7 +4,7 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.jemi.JemiUtil;
 import dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
-import dev.nolij.toomanyrecipeviewers.impl.ingredient.ErrorEmiStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.ErrorEmiStack;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,6 +1,6 @@
 package dev.nolij.toomanyrecipeviewers.mixin;
 
-import dev.nolij.toomanyrecipeviewers.impl.ingredient.TMRVStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.TMRVStack;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.IIngredientHelper;
 import mezz.jei.api.ingredients.ITypedIngredient;

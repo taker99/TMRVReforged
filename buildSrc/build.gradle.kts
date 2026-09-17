@@ -18,6 +18,6 @@ repositories {
 
 kotlin {
 	jvmToolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(providers.gradleProperty("buildsrc_java_version").get().toInt())
 	}
 }

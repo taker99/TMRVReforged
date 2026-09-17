@@ -1,0 +1,293 @@
+package dev.nolij.toomanyrecipeviewers.compat.plugin;
+
+//? if >=21.1 {
+import mezz.jei.library.helpers.CodecHelper;
+import mezz.jei.library.load.registration.ModInfoRegistration;
+import net.minecraft.client.Minecraft;
+//?}
+import dev.emi.emi.api.EmiEntrypoint;
+import dev.emi.emi.api.EmiInitRegistry;
+import dev.emi.emi.api.EmiPlugin;
+import dev.emi.emi.api.EmiRegistry;
+import dev.emi.emi.api.stack.EmiStack;
+import dev.emi.emi.api.stack.EmiStackInteraction;
+import dev.emi.emi.api.widget.Bounds;
+import dev.emi.emi.jemi.JemiRecipeHandler;
+import dev.emi.emi.jemi.runtime.JemiDragDropHandler;
+import dev.emi.emi.registry.EmiRecipeFiller;
+import dev.emi.emi.runtime.EmiReloadManager;
+import dev.nolij.toomanyrecipeviewers.client.decorator.TMRVDebugDecorator;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.helpers.ModIDHelper;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.recipe.RecipeManager;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.recipe.advanced.RecipeManagerPluginHelper;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.registration.RecipeRegistration;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.registration.RuntimeRegistration;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.JEIRuntime;
+import dev.nolij.toomanyrecipeviewers.impl.jei.common.network.ConnectionToServer;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.ErrorEmiStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.TMRVStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.TMRVStackSerializer;
+import dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers;
+import mezz.jei.api.runtime.IClickableIngredient;
+import mezz.jei.common.Internal;
+import mezz.jei.common.JeiFeatures;
+import mezz.jei.common.config.ClientToggleState;
+import mezz.jei.common.util.StackHelper;
+import mezz.jei.library.color.ColorHelper;
+import mezz.jei.library.config.ColorNameConfig;
+import mezz.jei.library.config.EditModeConfig;
+import mezz.jei.library.focus.FocusFactory;
+import mezz.jei.library.gui.helpers.GuiHelper;
+import mezz.jei.library.ingredients.IngredientBlacklistInternal;
+import mezz.jei.library.ingredients.IngredientVisibility;
+import mezz.jei.library.ingredients.subtypes.SubtypeManager;
+import mezz.jei.library.load.registration.AdvancedRegistration;
+import mezz.jei.library.load.registration.GuiHandlerRegistration;
+import mezz.jei.library.load.registration.RecipeTransferRegistration;
+import mezz.jei.library.load.registration.SubtypeRegistration;
+import mezz.jei.library.plugins.vanilla.ingredients.ItemStackHelper;
+import mezz.jei.library.plugins.vanilla.VanillaRecipeFactory;
+import mezz.jei.library.runtime.JeiHelpers;
+import mezz.jei.library.transfer.RecipeTransferHandlerHelper;
+import net.minecraft.network.chat.Component;
+import net.neoforged.fml.loading.FMLPaths;
+import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.NotNull;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
+
+import static dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers.*;
+import static dev.nolij.toomanyrecipeviewers.TooManyRecipeViewersMod.*;
+
+@EmiEntrypoint
+@ApiStatus.Internal
+public final class EMIPlugin implements EmiPlugin {
+	
+	@Override
+	public void initialize(EmiInitRegistry registry) {
+		EmiReloadManager.step(Component.literal("[TMRV] Initializing..."), 10L);
+		onRuntimeUnavailable();
+		
+		runtime = new TooManyRecipeViewers();
+		Internal.setServerConnection(new ConnectionToServer());
+		
+		registry.addIngredientSerializer(TMRVStack.class, new TMRVStackSerializer(runtime));
+	}
+	
+	@Override
+	public void register(EmiRegistry registry) {
+		runtime.emiRegistry = registry;
+		runtime.jeiPluginManager = new JEIPluginManager(registry);
+		
+		LOGGER.info("Loading JEI Plugins: [{}]", runtime.jeiPluginManager.pluginListString);
+		
+		registerSubtypes();
+		registerIngredients();
+		registerModAliases();
+		createJeiHelpers();
+		createRecipeManager();
+		registerRecipeTransferHandlers();
+		registerGuiHandlers();
+		onRuntimeAvailable();
+		
+		runtime.jeiPluginManager.logLoadTimes();
+		
+		registry.addGenericStackProvider((screen, x, y) -> new EmiStackInteraction(
+			runtime.screenHelper
+				.getClickableIngredientUnderMouse(screen, x, y)
+				.map(IClickableIngredient::getTypedIngredient)
+				.map(runtime.ingredientManager::getEMIStack)
+				.findFirst()
+				.orElse(EmiStack.EMPTY), 
+			null, false));
+		registry.addGenericDragDropHandler(new JemiDragDropHandler());
+		//noinspection UnstableApiUsage
+		registry.addRecipeDecorator(new TMRVDebugDecorator(runtime));
+		
+		runtime.lockRegistration();
+	}
+	
+	public static synchronized void onRuntimeUnavailable() {
+		if (runtime != null) {
+			final var jeiPlugins = runtime.jeiPluginManager;
+			
+			runtime = null;
+			Internal.setRuntime(null);
+			Internal.setServerConnection(null);
+			
+			if (jeiPlugins != null) {
+				jeiPlugins.onRuntimeUnavailable();
+			}
+		}
+	}
+	
+	private void registerSubtypes() {
+		final var subtypeRegistration = new SubtypeRegistration();
+		runtime.jeiPluginManager.registerItemSubtypes(subtypeRegistration);
+		runtime.jeiPluginManager.registerFluidSubtypes(subtypeRegistration, fluidHelper);
+		runtime.subtypeManager = new SubtypeManager(subtypeRegistration.getInterpreters());
+		runtime.stackHelper = new StackHelper(runtime.subtypeManager);
+	}
+	
+	private static final EditModeConfig.ISerializer VOID_SERIALIZER = new EditModeConfig.ISerializer() {
+		@Override
+		public void initialize(EditModeConfig editModeConfig) {}
+		
+		@Override
+		public void save(EditModeConfig editModeConfig) {}
+		
+		@Override
+		public void load(EditModeConfig editModeConfig) {}
+	};
+	
+	private static final Path BLACKLIST_PATH = FMLPaths.CONFIGDIR.get().resolve("jei").resolve("blacklist.json");
+	
+	private void registerIngredients() {
+		if (shouldShowDebugInfo())
+			runtime.emiRegistry.addEmiStack(ErrorEmiStack.INSTANCE);
+		
+		runtime.colorHelper = new ColorHelper(new ColorNameConfig());
+		runtime.itemStackHelper = new ItemStackHelper(
+			//? if <21.1
+			//runtime.subtypeManager,
+			runtime.stackHelper,
+			runtime.colorHelper
+		);
+		runtime.ingredientManager = new IngredientManager(runtime);
+		runtime.jeiPluginManager.registerIngredients(runtime.ingredientManager);
+		runtime.jeiPluginManager.registerExtraIngredients(runtime.ingredientManager);
+		runtime.jeiPluginManager.registerIngredientAliases(runtime.ingredientManager);
+		
+		runtime.guiHelper = new GuiHelper(runtime.ingredientManager);
+		runtime.focusFactory = new FocusFactory(runtime.ingredientManager);
+		//? if >=21.1
+		runtime.codecHelper = new CodecHelper(runtime.ingredientManager, runtime.focusFactory);
+		runtime.vanillaRecipeFactory = new VanillaRecipeFactory(runtime.itemStackHelper);
+		
+		runtime.blacklist = new IngredientBlacklistInternal(
+			//? if >=21.1
+			runtime.ingredientManager
+		);
+		runtime.ingredientManager.registerIngredientListener(runtime.blacklist);
+		runtime.clientToggleState = new ClientToggleState();
+		final EditModeConfig.ISerializer serializer;
+		if (Files.exists(BLACKLIST_PATH))
+			serializer = new EditModeConfig.FileSerializer(BLACKLIST_PATH
+				//? if >=21.1
+				, Objects.requireNonNull(Minecraft.getInstance().level).registryAccess(), runtime.codecHelper
+			);
+		else
+			serializer = VOID_SERIALIZER;
+		runtime.editModeConfig = new EditModeConfig(serializer, runtime.ingredientManager);
+		runtime.ingredientVisibility = new IngredientVisibility(runtime.blacklist, runtime.clientToggleState, runtime.editModeConfig, runtime.ingredientManager);
+	}
+	
+	private void registerModAliases() {
+		//? if >=21.1 {
+		final var modInfoRegistration = new ModInfoRegistration();
+		runtime.jeiPluginManager.registerModInfo(modInfoRegistration);
+		runtime.modAliases = modInfoRegistration.getModAliases();
+		//?}
+		runtime.modIdHelper = new ModIDHelper(runtime);
+	}
+	
+	private void createJeiHelpers() {
+		runtime.jeiHelpers = new JeiHelpers(
+			runtime.guiHelper,
+			runtime.stackHelper,
+			runtime.modIdHelper,
+			runtime.focusFactory,
+			runtime.colorHelper,
+			runtime.ingredientManager,
+			runtime.vanillaRecipeFactory,
+			//? if >=21.1
+			runtime.codecHelper,
+			runtime.ingredientVisibility
+		);
+	}
+	
+	private void createRecipeManager() {
+		runtime.recipeManager = new RecipeManager(runtime);
+		runtime.jeiPluginManager.registerCategories(runtime.recipeManager);
+		
+		registerVanillaCategoryExtensions();
+		
+		runtime.jeiPluginManager.registerRecipeCatalysts(runtime.recipeManager);
+		
+		final var recipeManagerPluginHelper = new RecipeManagerPluginHelper(runtime.recipeManager);
+		final var advancedRegistration = new AdvancedRegistration(runtime.jeiHelpers, new JeiFeatures(), recipeManagerPluginHelper);
+		runtime.jeiPluginManager.registerAdvanced(advancedRegistration);
+		
+		runtime.recipeManager.addPlugins(advancedRegistration.getRecipeManagerPlugins());
+		runtime.recipeManager.addDecorators(advancedRegistration.getRecipeCategoryDecorators());
+		//? if >=21.1
+		runtime.recipeManager.addRecipeButtonControllerFactories(advancedRegistration.getRecipeButtonControllerFactories());
+		
+		final var recipeRegistration = new RecipeRegistration(runtime.jeiHelpers, runtime.ingredientManager, runtime.recipeManager);
+		runtime.jeiPluginManager.registerRecipes(recipeRegistration);
+		
+		runtime.recipeManager.registerExtendedVanillaRecipes();
+	}
+	
+	private void registerVanillaCategoryExtensions() {
+		runtime.craftingCategory = JEIPluginManager.vanillaPlugin.getCraftingCategory()
+			.orElseThrow(() -> new AssertionError("JEI Vanilla plugin has no crafting category!"));
+		runtime.smithingCategory = JEIPluginManager.vanillaPlugin.getSmithingCategory()
+			.orElseThrow(() -> new AssertionError("JEI Vanilla plugin has no smithing category!"));
+		runtime.brewingExtensionHelper = JEIPluginManager.vanillaPlugin.getBrewingExtensionHelper()
+			.orElseThrow(() -> new AssertionError("JEI Vanilla plugin has no brewing category!"));
+		runtime.jeiPluginManager.registerVanillaCategoryExtensions(runtime.recipeManager);
+	}
+	
+	private void registerRecipeTransferHandlers() {
+		final var stackHelper = runtime.stackHelper;
+		final var handlerHelper = new RecipeTransferHandlerHelper(stackHelper, runtime.craftingCategory, Internal.getServerConnection());
+		final var recipeTransferRegistration = new RecipeTransferRegistration(stackHelper, handlerHelper, runtime.jeiHelpers, Internal.getServerConnection());
+		runtime.jeiPluginManager.registerRecipeTransferHandlers(recipeTransferRegistration);
+		runtime.recipeTransferManager = recipeTransferRegistration.createRecipeTransferManager();
+		
+		EmiRecipeFiller.extraHandlers = (handler, recipe) -> {
+			final var jeiCategory = runtime.recipeManager.category(recipe.getCategory()).getJEICategory();
+			if (jeiCategory != null) {
+				return runtime.recipeTransferManager
+					.getRecipeTransferHandler(handler, jeiCategory)
+					.map(JemiRecipeHandler::new)
+					.orElse(null);
+			}
+			return null;
+		};
+	}
+	
+	private void registerGuiHandlers() {
+		final var guiHandlerRegistration = new GuiHandlerRegistration(runtime.jeiHelpers);
+		runtime.jeiPluginManager.registerGuiHandlers(guiHandlerRegistration);
+		runtime.screenHelper = guiHandlerRegistration.createGuiScreenHelper(runtime.ingredientManager);
+		
+		runtime.emiRegistry.addGenericExclusionArea((screen, consumer) -> {
+			final var exclusions = runtime.screenHelper.getGuiExclusionAreas(screen).filter(Objects::nonNull).toList();
+			for (final var exclusion : exclusions) {
+				consumer.accept(new Bounds(exclusion.getX(), exclusion.getY(), exclusion.getWidth(), exclusion.getHeight()));
+			}
+		});
+	}
+	
+	private void onRuntimeAvailable() {
+		final var runtimeRegistration = registerRuntime();
+		
+		runtime.jeiRuntime = new JEIRuntime(runtimeRegistration, jeiKeyMappings, jeiConfigManager);
+		Internal.setRuntime(runtime.jeiRuntime);
+		runtime.jeiPluginManager.onRuntimeAvailable(runtime.jeiRuntime);
+	}
+	
+	private @NotNull RuntimeRegistration registerRuntime() {
+		final var runtimeRegistration = new RuntimeRegistration(runtime);
+		
+		runtime.jeiPluginManager.registerRuntime(runtimeRegistration);
+		
+		return runtimeRegistration;
+	}
+	
+}

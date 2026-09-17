@@ -9,6 +9,7 @@ import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
 import xyz.wagyourtail.unimined.api.unimined
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.Properties
 
 plugins {
 	id("java")
@@ -24,6 +25,15 @@ plugins {
 
 operator fun String.invoke(): String = project.properties[this] as? String ?: error("Property $this not found")
 
+fun loadTestDependencies(file: java.io.File): List<String> {
+	if (!file.isFile)
+		return emptyList()
+
+	val properties = Properties()
+	file.inputStream().use { properties.load(it) }
+	return properties.stringPropertyNames().sorted().map { properties.getProperty(it) }
+}
+
 idea.module {
 	isDownloadJavadoc = true
 	isDownloadSources = true
@@ -32,15 +42,13 @@ idea.module {
 val minecraftVersion = MinecraftVersion.get("minecraft_version"()) ?: error("Invalid `minecraft_version`!")
 val modLoader = ModLoader.get("mod_loader"()) ?: error("Invalid `mod_loader`!")
 val javaVersion = JavaVersion.valueOf("java_version"())
+val buildJavaVersion = JavaVersion.valueOf("build_java_version"())
+val testDependencies = loadTestDependencies(rootDir.resolve("versions/${stonecutter.current.project}/test-mods.properties"))
 
 project.group = "maven_group"()
-// `mod_version_exact` pins the version verbatim for local fork builds; without it the version is
-// derived from the release tags as before.
-// Derive first regardless: this initializes the version state the publishing block below reads.
-val derivedVersion = tau.versioning.subVersion("mc.${minecraftVersion.conciseName}")
-project.version = (rootProject.properties["mod_version_exact"] as? String)
-	?.let { "$it+mc.${minecraftVersion.conciseName}" }
-	?: derivedVersion
+// TauGradle needs its version state initialized for the publishing block below.
+tau.versioning.subVersion("mc.${minecraftVersion.conciseName}")
+project.version = "${"mod_version"()}+mc.${minecraftVersion.conciseName}"
 
 println("TooManyRecipeViewers version: ${project.version}")
 
@@ -97,10 +105,10 @@ dependencies {
 tasks.withType<JavaCompile> {
 	if (name !in arrayOf("compileMcLauncherJava", "compilePatchedMcJava")) {
 		options.encoding = "UTF-8"
-		sourceCompatibility = "25"
-		options.release = 25
+		sourceCompatibility = buildJavaVersion.majorVersion
+		options.release = buildJavaVersion.majorVersion.toInt()
 		javaCompiler = javaToolchains.compilerFor {
-			languageVersion = JavaLanguageVersion.of(25)
+			languageVersion = JavaLanguageVersion.of(buildJavaVersion.majorVersion.toInt())
 		}
 		options.compilerArgs.addAll(arrayOf("-Xplugin:Manifold no-bootstrap"))
 		options.forkOptions.jvmArgs?.add("-XX:+EnableDynamicAgentLoading")
@@ -118,7 +126,6 @@ tasks.processResources {
 	props.putAll(project.properties
 		.filterValues { value -> value is String }
 		.mapValues { entry -> entry.value as String })
-	// Honours `mod_version_exact` because project.version already resolved it above.
 	props["mod_version"] = project.version.toString()
 	props["mod_loader"] = modLoader.commonName
 	props["mixin_java_version"] = (project.properties["java_version"] as String).replace("VERSION_", "")
@@ -168,8 +175,8 @@ if (minecraftVersion < "20.5") {
 	configurations.configureEach {
 		resolutionStrategy.eachDependency {
 			if (requested.group == "org.lwjgl" && requested.version?.startsWith("3.") == true) {
-				useVersion("3.3.2")
-				because("compatible with Java 25")
+				useVersion("lwjgl_version"())
+				because("compatible with the configured build Java version")
 			}
 		}
 	}
@@ -180,7 +187,7 @@ unimined.minecraft {
 
 	runs {
 		config("client") {
-			javaVersion = JavaVersion.VERSION_25
+			javaVersion = buildJavaVersion
 			jvmArgs("-Xmx4G")
 		}
 	}
@@ -236,102 +243,13 @@ dependencies {
 	
 	// for testing purposes
 	if (minecraftVersion.equals("21.1") && modLoader == ModLoader.NEOFORGE) {
-		runtimeOnly("maven.modrinth:just-enough-professions-jep:4.0.3")
-		runtimeOnly("maven.modrinth:justenoughbreeding:mxmXy9Cs")
-		runtimeOnly("maven.modrinth:just-enough-effect-descriptions-jeed:m7gSD9ey")
-		runtimeOnly("maven.modrinth:mekanism:10.7.19.85")
-		runtimeOnly("maven.modrinth:mekanism-generators:10.7.19.85")
-		runtimeOnly("maven.modrinth:mekanism-additions:10.7.19.85")
-		runtimeOnly("maven.modrinth:mekanism-tools:10.7.19.85")
-		runtimeOnly("maven.modrinth:mekanism_extra:1.21.1-1.4.0")
-		runtimeOnly("curse.maven:mekanism-weapons-929829:6918569")
-//		runtimeOnly("curse.maven:just-enough-mekanism-multiblocks-898746:7921149")
-		runtimeOnly("curse.maven:actually-additions-228404:7676502")
-		runtimeOnly("curse.maven:placebo-283644:6068449")
-		runtimeOnly("curse.maven:apotheosis-313970:6078226")
-		runtimeOnly("curse.maven:apothic-attributes-898963:6060907")
-		runtimeOnly("curse.maven:apothic-enchanting-1063926:6084297")
-		runtimeOnly("curse.maven:apothic-spawners-986583:6058055")
-		runtimeOnly("maven.modrinth:c2me-neoforge:0.3.0+alpha.0.47+1.21.1")
-		runtimeOnly("curse.maven:sophisticated-core-618298:8084486")
-		runtimeOnly("curse.maven:sophisticated-storage-619320:8084562")
-		runtimeOnly("curse.maven:sophisticated-backpacks-422301:8084526")
-		runtimeOnly("curse.maven:sophisticated-storage-in-motion-1166930:8084593")
-		runtimeOnly("curse.maven:moderately-enough-effect-descriptions-meed-918638:6100615")
-		runtimeOnly("curse.maven:geckolib-388172:7707149")
-		runtimeOnly("maven.modrinth:curios:9.2.2+1.21.1")
-		runtimeOnly("curse.maven:ars-nouveau-401955:6228434")
-		runtimeOnly("curse.maven:polymorph-388800:5995380")
-		runtimeOnly("curse.maven:laserio-626839:5730007")
-		runtimeOnly("curse.maven:chipped-456956:5813117")
-		runtimeOnly("curse.maven:resourceful-lib-570073:5793500")
-		runtimeOnly("curse.maven:athena-841890:5629395")
-		runtimeOnly("curse.maven:farmers-delight-398521:8083481")
-		runtimeOnly("curse.maven:fruits-delight-943774:6095147")
-		runtimeOnly("curse.maven:puzzles-lib-495476:6095894")
-		runtimeOnly("curse.maven:visual-workbench-500273:5714956")
-		runtimeOnly("curse.maven:immersive-engineering-231951:5828000")
-		runtimeOnly("curse.maven:guideme-1173950:6223759")
-		runtimeOnly("curse.maven:applied-energistics-2-223794:6225422")
-		runtimeOnly("curse.maven:ae2-jei-integration-1074338:5748513")
-		runtimeOnly("curse.maven:blockui-522992:7790469")
-		runtimeOnly("curse.maven:domum-ornamentum-527361:7812603")
-		runtimeOnly("curse.maven:multi-piston-303278:5783614")
-		runtimeOnly("curse.maven:structurize-298744:8103320")
-		runtimeOnly("curse.maven:towntalk-900364:5653504")
-		runtimeOnly("curse.maven:minecolonies-245506:7966867")
-		runtimeOnly("curse.maven:playeranimator-658587:6024462")
-		runtimeOnly("curse.maven:irons-lib-1492763:7907336")
-		runtimeOnly("curse.maven:irons-spells-n-spellbooks-855414:7907341")
-//		runtimeOnly("maven.modrinth:jei-multiblocks:1.21.1-1.0.4")
-		runtimeOnly("curse.maven:just-dire-things-1002348:6369120")
-		runtimeOnly("curse.maven:fusion-connected-textures-854949:7471474")
-		runtimeOnly("curse.maven:supermartijn642s-core-lib-454372:7783425")
-		runtimeOnly("curse.maven:supermartijn642s-config-lib-438332:5546996")
-		runtimeOnly("curse.maven:rechiseled-558998:7687594")
-		runtimeOnly("maven.modrinth:kotlin-for-forge:5.10.0")
-		runtimeOnly("maven.modrinth:more-enchantment-info:46MhKH74")
-		runtimeOnly("curse.maven:itemzoom-261725:5536959")
-		runtimeOnly("curse.maven:mekagenjei-mekanism-generator-addon-1347827:7224975")
-		runtimeOnly("curse.maven:reliquary-reincarnations-241319:8054285")
-		runtimeOnly("curse.maven:pneumaticcraft-repressurized-281849:8062194")
-		runtimeOnly("curse.maven:lets-do-vinery-704465:7539914")
-		runtimeOnly("curse.maven:lets-do-herbal-brews-951221:7657017")
-		runtimeOnly("curse.maven:lets-do-farm-charm-1038103:7959521")
-		runtimeOnly("curse.maven:lets-do-brewery-farm-charm-compat-1038106:7830639")
-		runtimeOnly("curse.maven:architectury-api-419699:5786327")
-		runtimeOnly("curse.maven:extra-mod-integrations-739970:6939681")
-//		runtimeOnly("com.simibubi.create:create-1.21.1:6.0.9-184")
+		testDependencies.forEach { runtimeOnly(it) }
 	} else if (minecraftVersion.equals("20.1") && modLoader == ModLoader.LEXFORGE) {
 		compileOnly("io.github.llamalad7:mixinextras-common:${"mixinextras_version"()}")
 		include("io.github.llamalad7:mixinextras-forge:${"mixinextras_version"()}")
 		implementation("io.github.llamalad7:mixinextras-forge:${"mixinextras_version"()}")
 
-		modRuntimeOnly("curse.maven:actually-subtractions-1083685:6223947")
-//		modRuntimeOnly("curse.maven:ender-io-64578:6274905")
-		modRuntimeOnly("curse.maven:puzzles-lib-495476:6387081")
-		modRuntimeOnly("curse.maven:visual-workbench-500273:4612695")
-//		modRuntimeOnly("curse.maven:mantle-74924:6258424")
-//		modRuntimeOnly("curse.maven:tinkers-construct-74072:6266282")
-		modRuntimeOnly("curse.maven:fusion-connected-textures-854949:6453794")
-		modRuntimeOnly("curse.maven:supermartijn642s-core-lib-454372:6034718")
-		modRuntimeOnly("curse.maven:supermartijn642s-config-lib-438332:4715408")
-//		modRuntimeOnly("curse.maven:rechiseled-558998:5286306")
-//		modRuntimeOnly("curse.maven:the-twilight-forest-227639:5468648")
-//		modRuntimeOnly("curse.maven:tcintegrations-602680:6618094")
-//		modRuntimeOnly("curse.maven:farmers-delight-398521:6597298")
-//		modRuntimeOnly("curse.maven:fruits-delight-943774:6500940")
-		modRuntimeOnly("maven.modrinth:kotlin-for-forge:4.11.0")
-		modRuntimeOnly("maven.modrinth:more-enchantment-info:wdzLMJrS")
-//		modRuntimeOnly("net.createmod.ponder:Ponder-Forge-${minecraftVersion.mojangName}:1.0.92")
-//		modRuntimeOnly("dev.engine-room.flywheel:flywheel-forge-${minecraftVersion.mojangName}:1.0.5")
-//		modRuntimeOnly("curse.maven:create-328085:7178761")
-//		modRuntimeOnly("maven.modrinth:petrolpark:1.20.1-1.4.22")
-//		modRuntimeOnly("maven.modrinth:destroy:1.20.1-0.1.3")
-		modRuntimeOnly("curse.maven:mekanism-268560:6552911")
-		modRuntimeOnly("curse.maven:architectury-api-419699:5137938")
-		modRuntimeOnly("curse.maven:rhino-416294:6186971")
-		modRuntimeOnly("curse.maven:kubejs-238086:5853326")
+		testDependencies.forEach { modRuntimeOnly(it) }
 	}
 }
 
@@ -374,7 +292,7 @@ tasks.named<RemapJarTask>("remapJar") {
 }
 val inputJar = tasks.getByName("remapJar") as AbstractArchiveTask
 
-val compressionInputJar = if (javaVersion.ordinal < JavaVersion.VERSION_25.ordinal) {
+val compressionInputJar = if (javaVersion.ordinal < buildJavaVersion.ordinal) {
 	jvmdg.defaultTask {
 		inputFile = inputJar.archiveFile
 		downgradeTo = javaVersion

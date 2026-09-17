@@ -3,7 +3,7 @@ package dev.nolij.toomanyrecipeviewers.mixin;
 import dev.emi.emi.api.recipe.EmiRecipe;
 import dev.emi.emi.jemi.JemiRecipeHandler;
 import dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers;
-import dev.nolij.toomanyrecipeviewers.impl.recipe.TMRVRecipe;
+import dev.nolij.toomanyrecipeviewers.client.recipe.TMRVRecipe;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

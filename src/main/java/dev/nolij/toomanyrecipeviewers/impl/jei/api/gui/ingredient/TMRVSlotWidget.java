@@ -10,7 +10,7 @@ import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.builder.TMRVTooltipBuilde
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.drawable.OffsetDrawable;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.builder.TMRVIngredientCollector;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
-import dev.nolij.toomanyrecipeviewers.impl.ingredient.ErrorEmiStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.ErrorEmiStack;
 import mezz.jei.api.gui.builder.IIngredientConsumer;
 import mezz.jei.api.gui.ingredient.IRecipeSlotRichTooltipCallback;
 import mezz.jei.api.gui.ingredient.IRecipeSlotView;

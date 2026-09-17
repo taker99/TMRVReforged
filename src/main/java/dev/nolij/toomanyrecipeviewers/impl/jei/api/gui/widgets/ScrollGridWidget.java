@@ -2,7 +2,7 @@ package dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.widgets;
 
 import dev.emi.emi.api.widget.WidgetHolder;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.ingredient.ITMRVSlotWidget;
-import dev.nolij.toomanyrecipeviewers.impl.widget.ScrollBarWidget;
+import dev.nolij.toomanyrecipeviewers.client.widget.ScrollBarWidget;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.placement.HorizontalAlignment;

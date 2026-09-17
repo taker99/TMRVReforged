@@ -4,7 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.emi.emi.platform.EmiAgnos;
 import dev.emi.emi.registry.EmiPluginContainer;
-import dev.nolij.toomanyrecipeviewers.plugin.TMRVPluginConfig;
+import dev.nolij.toomanyrecipeviewers.compat.plugin.TMRVPluginConfig;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.List;

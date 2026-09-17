@@ -10,7 +10,7 @@ import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.JEIKeyMappings;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.JEIRuntime;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.config.JEIConfigManager;
-import dev.nolij.toomanyrecipeviewers.plugin.JEIPluginManager;
+import dev.nolij.toomanyrecipeviewers.compat.plugin.JEIPluginManager;
 import mezz.jei.api.helpers.IColorHelper;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.helpers.IJeiHelpers;

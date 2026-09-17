@@ -3,8 +3,8 @@ package dev.nolij.toomanyrecipeviewers.mixin;
 //? if <21.1 {
 /*import java.util.Optional;
 *///?}
-import dev.nolij.toomanyrecipeviewers.impl.ingredient.ErrorIngredient;
-import dev.nolij.toomanyrecipeviewers.impl.ingredient.TMRVStack;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.ErrorIngredient;
+import dev.nolij.toomanyrecipeviewers.client.ingredient.TMRVStack;
 import dev.nolij.toomanyrecipeviewers.util.IStackish;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.runtime.IIngredientManager;
