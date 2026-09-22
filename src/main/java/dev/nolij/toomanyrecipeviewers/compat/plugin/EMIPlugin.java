@@ -13,7 +13,6 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.stack.EmiStackInteraction;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.jemi.JemiRecipeHandler;
-import dev.emi.emi.jemi.runtime.JemiDragDropHandler;
 import dev.emi.emi.registry.EmiRecipeFiller;
 import dev.emi.emi.runtime.EmiReloadManager;
 import dev.nolij.toomanyrecipeviewers.client.decorator.TMRVDebugDecorator;
@@ -103,7 +102,7 @@ public final class EMIPlugin implements EmiPlugin {
 				.findFirst()
 				.orElse(EmiStack.EMPTY), 
 			null, false));
-		registry.addGenericDragDropHandler(new JemiDragDropHandler());
+		registry.addGenericDragDropHandler(new TMRVDragDropHandler(runtime.screenHelper));
 		//noinspection UnstableApiUsage
 		registry.addRecipeDecorator(new TMRVDebugDecorator(runtime));
 		
@@ -146,9 +145,6 @@ public final class EMIPlugin implements EmiPlugin {
 	private static final Path BLACKLIST_PATH = FMLPaths.CONFIGDIR.get().resolve("jei").resolve("blacklist.json");
 	
 	private void registerIngredients() {
-		if (shouldShowDebugInfo())
-			runtime.emiRegistry.addEmiStack(ErrorEmiStack.INSTANCE);
-		
 		runtime.colorHelper = new ColorHelper(new ColorNameConfig());
 		runtime.itemStackHelper = new ItemStackHelper(
 			//? if <21.1

@@ -131,7 +131,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -487,7 +489,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 	//endregion
 	
 	//region RecipeManagerInternal
-	private <T> void addRecipe(Category<T> category, T jeiRecipe, Plugin plugin) {
+	private <T> boolean addRecipe(Category<T> category, T jeiRecipe, Plugin plugin) {
 		final var jeiCategory = category.getJEICategory();
 		final var jeiRecipeType = Objects.requireNonNull(jeiCategory).getRecipeType();
 		if (!jeiCategory.isHandled(jeiRecipe)) {
@@ -495,7 +497,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 				String recipeInfo = RecipeDebugUtil.getDebugInfoFromRecipe(jeiRecipe, jeiCategory, ingredientManager);
 				LOGGER.debug("Recipe not added because the recipe category cannot handle it: {}", recipeInfo);
 			}
-			return;
+			return false;
 		}
 		
 		try {
@@ -516,9 +518,11 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 					replacedRecipeIDs.add(originalID);
 				}
 			}
+			return true;
 		} catch (RuntimeException | LinkageError e) {
 			final var recipeInfo = RecipeDebugUtil.getDebugInfoFromRecipe(jeiRecipe, jeiCategory, ingredientManager);
 			LOGGER.error("Found a broken recipe, failed to addRecipe: {}\n", recipeInfo, e);
+			return false;
 		}
 	}
 	
@@ -947,8 +951,8 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 		return new ExtensionLookupResult<>(extension, plugin);
 	}
 	
-	// TODO: return plugin stats
-	public void registerExtendedVanillaRecipes() {
+	public Map<Plugin, Integer> registerExtendedVanillaRecipes() {
+		final Map<Plugin, Integer> pluginStats = new LinkedHashMap<>();
 		var timestamp = System.currentTimeMillis();
 		var craftingRecipes = 0;
 		final var craftingCategory = category(RecipeTypes.CRAFTING);
@@ -957,8 +961,19 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			if (result != null &&
 				!result.plugin().type().partialLoad &&
 				result.plugin().type() != PluginType.VANILLA_PLUGIN) {
-				addRecipe(craftingCategory, craftingRecipe, result.plugin());
-				craftingRecipes++;
+				try {
+					result.extension().getWidth(
+						//? if >=21.1
+						craftingRecipe
+					);
+				} catch (NoSuchElementException e) {
+					LOGGER.debug("[{}] Skipped an incompatible extended crafting recipe: {}", result.plugin(), craftingRecipe, e);
+					continue;
+				}
+				if (addRecipe(craftingCategory, craftingRecipe, result.plugin())) {
+					pluginStats.merge(result.plugin(), 1, Integer::sum);
+					craftingRecipes++;
+				}
 			}
 		}
 		LOGGER.info("Added {} extended crafting recipes in {}ms", craftingRecipes, System.currentTimeMillis() - timestamp);
@@ -974,8 +989,10 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			if (result != null &&
 				!result.plugin().type().partialLoad &&
 				result.plugin().type() != PluginType.VANILLA_PLUGIN) {
-				addRecipe(smithingCategory, smithingRecipe, result.plugin());
-				smithingRecipes++;
+				if (addRecipe(smithingCategory, smithingRecipe, result.plugin())) {
+					pluginStats.merge(result.plugin(), 1, Integer::sum);
+					smithingRecipes++;
+				}
 			}
 		}
 		LOGGER.info("Added {} extended smithing recipes in {}ms", smithingRecipes, System.currentTimeMillis() - timestamp);
@@ -983,6 +1000,8 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 //		timestamp = System.currentTimeMillis();
 //		var brewingRecipes = 0;
 //		final var brewingCategory = category(RecipeTypes.BREWING);
+		pluginStats.forEach((plugin, count) -> LOGGER.info("[{}] Added {} extended vanilla recipes", plugin, count));
+		return Collections.unmodifiableMap(pluginStats);
 	}
 	//endregion
 	
