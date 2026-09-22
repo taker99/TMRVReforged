@@ -7,9 +7,12 @@ import mezz.jei.api.runtime.IJeiKeyMapping;
 import mezz.jei.common.input.IInternalKeyMappings;
 import mezz.jei.common.input.keys.IJeiKeyMappingInternal;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -109,6 +112,73 @@ public class JEIKeyMappings implements IInternalKeyMappings {
 		}
 		
 	}
+
+	private record UnboundJEIKeyMapping(String translationKey) implements IJeiKeyMappingInternal {
+
+		@Override
+		public boolean isActiveAndMatches(InputConstants.@NotNull Key key) {
+			return false;
+		}
+
+		@Override
+		public boolean isUnbound() {
+			return true;
+		}
+
+		@Override
+		public @NotNull Component getTranslatedKeyMessage() {
+			return Component.translatable(translationKey);
+		}
+
+		@Override
+		public boolean isDown() {
+			return false;
+		}
+
+		@Override
+		public IJeiKeyMappingInternal register(Consumer<KeyMapping> consumer) {
+			return this;
+		}
+
+	}
+
+	private record FixedJEIKeyMapping(List<InputConstants.Key> keys) implements IJeiKeyMappingInternal {
+
+		FixedJEIKeyMapping(InputConstants.Key... keys) {
+			this(List.of(keys));
+		}
+
+		@Override
+		public boolean isActiveAndMatches(InputConstants.@NotNull Key key) {
+			return keys.contains(key);
+		}
+
+		@Override
+		public boolean isUnbound() {
+			return false;
+		}
+
+		@Override
+		public @NotNull Component getTranslatedKeyMessage() {
+			return keys.get(0).getDisplayName();
+		}
+
+		@Override
+		public boolean isDown() {
+			final var window = Minecraft.getInstance().getWindow().getWindow();
+			return keys.stream().anyMatch(key -> switch (key.getType()) {
+				case KEYSYM -> InputConstants.isKeyDown(window, key.getValue());
+				case MOUSE -> GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
+				case SCANCODE -> false;
+			});
+		}
+
+		@Override
+		public IJeiKeyMappingInternal register(Consumer<KeyMapping> consumer) {
+			return this;
+		}
+
+	}
 	
 	private final IJeiKeyMappingInternal dummy = new DummyJEIKeyMapping();
 	
@@ -121,6 +191,16 @@ public class JEIKeyMappings implements IInternalKeyMappings {
 	private final IJeiKeyMappingInternal viewUses = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.viewUses);
 	private final IJeiKeyMappingInternal cheatOneToInventory = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.cheatOneToInventory);
 	private final IJeiKeyMappingInternal cheatStackToInventory = new EMIDelegatedJEIKeyMapping(() -> EmiConfig.cheatStackToInventory);
+	private final IJeiKeyMappingInternal escape = new FixedJEIKeyMapping(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_ESCAPE));
+	private final IJeiKeyMappingInternal leftClick = new FixedJEIKeyMapping(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_LEFT));
+	private final IJeiKeyMappingInternal rightClick = new FixedJEIKeyMapping(InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_RIGHT));
+	private final IJeiKeyMappingInternal enter = new FixedJEIKeyMapping(
+		InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_ENTER),
+		InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_KP_ENTER)
+	);
+	private final IJeiKeyMappingInternal leftShift = new FixedJEIKeyMapping(InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_LEFT_SHIFT));
+	private final IJeiKeyMappingInternal controlOrCommand = new FixedJEIKeyMapping(InputConstants.Type.KEYSYM.getOrCreate(Minecraft.ON_OSX ? GLFW.GLFW_KEY_LEFT_SUPER : GLFW.GLFW_KEY_LEFT_CONTROL));
+	private final IJeiKeyMappingInternal shareToChat = new UnboundJEIKeyMapping("key.jei.shareToChat");
 	
 	@Override
 	public IJeiKeyMapping getToggleOverlay() {
@@ -271,37 +351,37 @@ public class JEIKeyMappings implements IInternalKeyMappings {
 	
 	@Override
 	public IJeiKeyMapping getEscapeKey() {
-		return dummy; // TODO
+		return escape;
 	}
 	
 	@Override
 	public IJeiKeyMapping getLeftClick() {
-		return dummy; // TODO
+		return leftClick;
 	}
 	
 	@Override
 	public IJeiKeyMapping getRightClick() {
-		return dummy; // TODO
+		return rightClick;
 	}
 	
 	@Override
 	public IJeiKeyMapping getEnterKey() {
-		return dummy; // TODO
+		return enter;
 	}
 	
 	@Override
 	public IJeiKeyMapping getShareToChat() {
-		return dummy; // TODO
+		return shareToChat;
 	}
 	
 	@Override
 	public IJeiKeyMappingInternal getShowBookmarkTooltipFeatures() {
-		return dummy; // TODO
+		return controlOrCommand;
 	}
 	
 	@Override
 	public IJeiKeyMappingInternal getPauseRecipeCycling() {
-		return dummy; // TODO
+		return leftShift;
 	}
 	
 }

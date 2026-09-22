@@ -5,6 +5,7 @@ import dev.emi.emi.jemi.runtime.JemiIngredientFilter;
 import dev.emi.emi.jemi.runtime.JemiIngredientListOverlay;
 import dev.emi.emi.jemi.runtime.JemiRecipesGui;
 import dev.nolij.toomanyrecipeviewers.TooManyRecipeViewers;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.search.SubstringSearchStorage;
 import mezz.jei.api.helpers.IJeiHelpers;
 import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.recipe.transfer.IRecipeTransferManager;
@@ -100,12 +101,12 @@ public class RuntimeRegistration implements IRuntimeRegistration {
 	@SuppressWarnings("removal")
 	@Override
 	public ISearchStorageFactory getSearchStorageFactory() {
-		throw new UnsupportedOperationException(); // TODO
+		return SubstringSearchStorage::new;
 	}
 	
 	@Override
 	public ISearchStorageBuilderFactory getSearchStorageBuilderFactory() {
-		throw new UnsupportedOperationException(); // TODO
+		return SubstringSearchStorage::new;
 	}
 	
 	public IIngredientListOverlay getIngredientListOverlay() {
