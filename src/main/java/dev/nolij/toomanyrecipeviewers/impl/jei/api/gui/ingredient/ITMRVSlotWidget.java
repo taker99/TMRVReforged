@@ -4,12 +4,13 @@ import dev.emi.emi.api.widget.SlotWidget;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.drawable.OffsetDrawable;
 import dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.builder.TMRVIngredientCollector;
 import mezz.jei.api.gui.ingredient.IRecipeSlotRichTooltipCallback;
+import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 @SuppressWarnings("UnusedReturnValue")
-public interface ITMRVSlotWidget {
+public interface ITMRVSlotWidget extends IRecipeSlotDrawable {
 	
 	void setName(@Nullable String name);
 	
@@ -22,6 +23,8 @@ public interface ITMRVSlotWidget {
 	void setPosition(int x, int y);
 	
 	void setVisible(boolean visible);
+
+	boolean isVisible();
 	
 	TMRVIngredientCollector getIngredientCollector();
 	

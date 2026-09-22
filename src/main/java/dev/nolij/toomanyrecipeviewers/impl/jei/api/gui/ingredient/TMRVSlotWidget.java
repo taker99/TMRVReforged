@@ -133,6 +133,11 @@ public class TMRVSlotWidget extends SlotWidget implements ITMRVRecipeSlotDrawabl
 	public void setVisible(boolean visible) {
 		this.visible = visible;
 	}
+
+	@Override
+	public boolean isVisible() {
+		return visible;
+	}
 	
 	//region SlotWidget
 	@Override
@@ -173,13 +178,19 @@ public class TMRVSlotWidget extends SlotWidget implements ITMRVRecipeSlotDrawabl
 	
 	@Override
 	protected void addSlotTooltip(List<ClientTooltipComponent> list) {
-		applyTooltipCallbacks(list, tooltipCallbacks, this);
-		
 		super.addSlotTooltip(list);
+		applyTooltipCallbacks(list, tooltipCallbacks, this);
 	}
 	//endregion
 	
 	//region ITMRVRecipeSlotDrawable
+	@Override
+	public List<ClientTooltipComponent> tmrv$getTooltipComponents() {
+		final var tooltip = new ArrayList<ClientTooltipComponent>();
+		addSlotTooltip(tooltip);
+		return tooltip;
+	}
+
 	@Override
 	public void draw(GuiGraphics guiGraphics) {
 		render(guiGraphics, EmiScreenManager.lastMouseX, EmiScreenManager.lastMouseY, 0F);
@@ -202,6 +213,18 @@ public class TMRVSlotWidget extends SlotWidget implements ITMRVRecipeSlotDrawabl
 	@Override
 	public Rect2i getRect() {
 		return rect.toMutable();
+	}
+
+	@Override
+	public Rect2i getAreaIncludingBackground() {
+		if (background == null)
+			return getRect();
+
+		final var x = Math.min(rect.x(), rect.x() + background.xOffset());
+		final var y = Math.min(rect.y(), rect.y() + background.yOffset());
+		final var right = Math.max(rect.x() + rect.width(), rect.x() + background.xOffset() + background.getWidth());
+		final var bottom = Math.max(rect.y() + rect.height(), rect.y() + background.yOffset() + background.getHeight());
+		return new Rect2i(x, y, right - x, bottom - y);
 	}
 	
 	@Override

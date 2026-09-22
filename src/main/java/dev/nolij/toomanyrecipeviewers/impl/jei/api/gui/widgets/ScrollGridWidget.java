@@ -104,7 +104,11 @@ public class ScrollGridWidget implements IScrollGridWidget {
 	
 	@Override
 	public Optional<RecipeSlotUnderMouse> getSlotUnderMouse(double x, double y) {
-		return Optional.empty(); // TODO
+		return slots.stream()
+			.filter(ITMRVSlotWidget::isVisible)
+			.filter(slot -> slot.isMouseOver(x, y))
+			.findFirst()
+			.map(slot -> new RecipeSlotUnderMouse(slot, new ScreenPosition(0, 0)));
 	}
 	
 	@Override

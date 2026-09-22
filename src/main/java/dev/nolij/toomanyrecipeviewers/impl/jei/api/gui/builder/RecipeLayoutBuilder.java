@@ -25,6 +25,8 @@ public class RecipeLayoutBuilder implements IRecipeLayoutBuilder {
 	
 	private final List<RecipeSlotBuilder> slots = new ArrayList<>();
 	private boolean shapeless = false;
+	private int recipeTransferX = -1;
+	private int recipeTransferY = -1;
 	
 	public RecipeLayoutBuilder(IngredientManager ingredientManager) {
 		this.ingredientManager = ingredientManager;
@@ -64,6 +66,14 @@ public class RecipeLayoutBuilder implements IRecipeLayoutBuilder {
 	public List<RecipeSlotBuilder> getSlots() {
 		return slots;
 	}
+
+	public int getRecipeTransferX() {
+		return recipeTransferX;
+	}
+
+	public int getRecipeTransferY() {
+		return recipeTransferY;
+	}
 	
 	@Override
 	public IRecipeSlotBuilder addSlot(RecipeIngredientRole role) {
@@ -85,7 +95,8 @@ public class RecipeLayoutBuilder implements IRecipeLayoutBuilder {
 	
 	@Override
 	public void moveRecipeTransferButton(int x, int y) {
-		// TODO
+		recipeTransferX = x;
+		recipeTransferY = y;
 	}
 	
 	@Override

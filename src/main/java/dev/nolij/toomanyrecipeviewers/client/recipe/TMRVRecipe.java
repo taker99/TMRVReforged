@@ -35,6 +35,8 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 	
 	private @Nullable List<EmiIngredient> inputs;
 	private @Nullable List<EmiStack> outputs;
+	private int recipeTransferX = -1;
+	private int recipeTransferY = -1;
 	
 	public TMRVRecipe(TooManyRecipeViewers runtime, RecipeManager.Category<T> category, T jeiRecipe, ResourceLocation id) {
 		Objects.requireNonNull(category.getJEICategory());
@@ -59,6 +61,15 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 		
 		return builder;
 	}
+
+	private void ensureRecipeData() {
+		if (inputs != null && outputs != null)
+			return;
+
+		final var recipeData = buildRecipe().extractEMIRecipeData();
+		inputs = recipeData.inputs();
+		outputs = recipeData.outputs();
+	}
 	
 	@Override
 	public EmiRecipeCategory getCategory() {
@@ -72,10 +83,8 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 	
 	@Override
 	public List<EmiIngredient> getInputs() {
-		if (inputs != null)
-			return inputs;
-		
-		return buildRecipe().extractEMIRecipeData().inputs();
+		ensureRecipeData();
+		return Objects.requireNonNull(inputs);
 	}
 	
 	@Override
@@ -85,10 +94,8 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 	
 	@Override
 	public List<EmiStack> getOutputs() {
-		if (outputs != null)
-			return outputs;
-		
-		return buildRecipe().extractEMIRecipeData().outputs();
+		ensureRecipeData();
+		return Objects.requireNonNull(outputs);
 	}
 	
 	@Override
@@ -111,6 +118,8 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 	@Override
 	public void addWidgets(WidgetHolder widgets) {
 		final var builder = buildRecipe();
+		recipeTransferX = builder.getRecipeTransferX();
+		recipeTransferY = builder.getRecipeTransferY();
 		
 		final var rootWidget = widgets.add(new TMRVRecipeWidget(widgets, getDisplayWidth(), getDisplayHeight()) {
 			@SuppressWarnings("removal")
@@ -148,6 +157,18 @@ public class TMRVRecipe<T> implements EmiRecipe, IDebuggableRecipe, TooManyRecip
 		rootWidget.addSlotWidgets(builder, this);
 		//noinspection DataFlowIssue
 		category.getJEICategory().createRecipeExtras(rootWidget, jeiRecipe, FocusGroup.EMPTY);
+	}
+
+	public boolean hasRecipeTransferPosition() {
+		return recipeTransferX >= 0 && recipeTransferY >= 0;
+	}
+
+	public int getRecipeTransferX() {
+		return recipeTransferX;
+	}
+
+	public int getRecipeTransferY() {
+		return recipeTransferY;
 	}
 	
 	@Override
