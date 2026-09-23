@@ -23,8 +23,8 @@ werden.
 - Vorhandene fremde Änderungen niemals überschreiben, zurücksetzen oder
   mitspeichern.
 - Minecraft, Server, Instanz oder GUI nicht automatisch starten.
-- Keine JAR in eine Instanz kopieren und nichts veröffentlichen, sofern das
-  nicht ausdrücklich beauftragt wurde.
+- Codex darf niemals eine JAR im Modpack oder einer Minecraft-Instanz installieren, kopieren, ersetzen, umbenennen oder entfernen und kein Deployment-Skript ausführen. Der Benutzer erledigt die Installation selbst, auch wenn Build oder JAR-Übergabe beauftragt sind. Lokale Builds im Quellrepository sind erlaubt.
+- Nichts veröffentlichen, sofern das nicht ausdrücklich beauftragt wurde.
 
 ## Shell und Git
 
@@ -49,6 +49,14 @@ werden.
   automatischen Versionssprung.
 - Bei ausgeliefertem Mod-Verhalten müssen Changelog, Version und Artefakt vor
   einer Auslieferung zusammen geprüft werden.
+
+### Release-Regeln
+
+- Vor Änderungen an ausgeliefertem Code, Ressourcen, Metadaten oder Build-Einstellungen `mod_version` und vorhandene Release-Nachweise prüfen; vor dem finalen Build oder Commit erneut prüfen. In diesem Repository gibt es derzeit keine `version_release.txt`. Sie darf nicht von Codex angelegt oder geändert werden; falls das Deployment-Tool sie künftig verwaltet, darf Codex sie nur lesen und niemals erstellen, ändern, löschen, wiederherstellen, stagen oder committen.
+- Ist die aktuelle Mod-Version nachweislich bereits ins Modpack kopiert oder anderweitig verteilt worden, für jede weitere JAR-Änderung eine höhere passende SemVer-Version setzen, sofern der Benutzer einen Bump nicht ausdrücklich untersagt. Unterschiedliche JAR-Inhalte niemals unter derselben Version erneut deployen. Ohne belastbaren Release-Nachweis den Status klären, statt eine Version als unveröffentlicht anzunehmen.
+- Eine vorbereitete, nachweislich noch nicht verteilte Version darf über mehrere Aufgaben und lokale Builds hinweg weitergeführt werden. Ein lokaler Build allein löst keinen weiteren Bump aus. Nach einem Modpack-Test mit deployter JAR braucht ein weiterer Fix eine neue Version.
+- `CHANGELOG.md` konsequent in natürlichem Englisch führen. Jede ausgelieferte Funktion, Verhaltensänderung und Fehlerbehebung, auch ein kleiner Fix während des Feature-Tests, gehört unter die konkrete Mod-Version. Tatsächliche Stabilitäts- oder Performance-Verbesserungen dürfen auch mit einer zusammenfassenden Formulierung beschrieben werden. Reine Kommentaränderungen und interne Umstrukturierungen ohne spürbare Verbesserung gehören nicht hinein. Bereits verteilte Versionsabschnitte nicht nachträglich erweitern. Die oberste konkrete Versionsüberschrift muss `mod_version` entsprechen.
+- Aktuelle Versionsbeispiele in der Dokumentation beim Bump anpassen. Vor Übergabe einer JAR bei beiden Zielvarianten Dateinamen und eingebettete Mod-Version gegen `mod_version` und die neueste Changelog-Überschrift prüfen. Die Ingame-Abnahme und den Modpack-Release entscheidet der Benutzer nach dem Test.
 
 ## Code
 
