@@ -64,6 +64,8 @@ import static dev.nolij.toomanyrecipeviewers.TooManyRecipeViewersMod.*;
 @EmiEntrypoint
 @ApiStatus.Internal
 public final class EMIPlugin implements EmiPlugin {
+	private static int registrationsInProgress;
+	private static boolean teardownPending;
 	
 	@Override
 	public void initialize(EmiInitRegistry registry) {
@@ -78,6 +80,24 @@ public final class EMIPlugin implements EmiPlugin {
 	
 	@Override
 	public void register(EmiRegistry registry) {
+		synchronized (EMIPlugin.class) {
+			if (runtime == null)
+				return;
+			registrationsInProgress++;
+		}
+		try {
+			registerAll(registry);
+		} finally {
+			synchronized (EMIPlugin.class) {
+				if (--registrationsInProgress == 0 && teardownPending) {
+					teardownPending = false;
+					onRuntimeUnavailable();
+				}
+			}
+		}
+	}
+
+	private void registerAll(EmiRegistry registry) {
 		runtime.emiRegistry = registry;
 		runtime.jeiPluginManager = new JEIPluginManager(registry);
 		
@@ -107,6 +127,14 @@ public final class EMIPlugin implements EmiPlugin {
 		registry.addRecipeDecorator(new TMRVDebugDecorator(runtime));
 		
 		runtime.lockRegistration();
+	}
+
+	public static synchronized void onLoggingOut() {
+		if (registrationsInProgress > 0) {
+			teardownPending = true;
+			return;
+		}
+		onRuntimeUnavailable();
 	}
 	
 	public static synchronized void onRuntimeUnavailable() {

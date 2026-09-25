@@ -72,7 +72,7 @@ public class TooManyRecipeViewersMod {
 	}
 	
 	private void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-		EMIPlugin.onRuntimeUnavailable();
+		EMIPlugin.onLoggingOut();
 	}
 	
 	private void onRegisterClientReloadListeners(RegisterClientReloadListenersEvent event) {
