@@ -322,7 +322,7 @@ tasks.assemble {
 rootProject.tau.publishing.modArtifact("${modLoader.displayName} ${minecraftVersion.conciseName}") {
 	files(provider { outputJar.get().archiveFile }, provider { sourcesJar.get().archiveFile })
 
-	version = tau.versioning.version
+	version = project.version.toString()
 
 	minecraftVersionRange = minecraftVersion.mojangName
 	javaVersions.add(javaVersion)

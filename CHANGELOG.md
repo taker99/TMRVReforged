@@ -1,3 +1,7 @@
+## 9.0.3
+
+- Align publishing and JAR metadata with the mod version.
+
 ## 9.0.2
 
 - further improvements to overall system stability and other minor adjustments have been made to enhance the user experience
