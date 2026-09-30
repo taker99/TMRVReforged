@@ -1,3 +1,11 @@
+## 9.0.7
+
+- Preserve amounts, probabilities, remainders, and comparisons when copying custom ingredient stacks.
+- Fix fluid aliases and return an empty lookup result for unknown item and fluid UIDs.
+- Dispatch recipe widget clicks once to the correct JEI GUI listener callback.
+- Save custom ingredients without codecs using their registered UIDs.
+- Exclude rejected ingredients from additions during plugin registration.
+
 ## 9.0.6
 
 - Prevent a JEI/EMI reload error when leaving a world while recipes are still registering.

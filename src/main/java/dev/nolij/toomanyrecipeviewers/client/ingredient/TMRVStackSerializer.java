@@ -3,9 +3,8 @@ package dev.nolij.toomanyrecipeviewers.client.ingredient;
 //? if >=21.1 {
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
-//?} else {
-/*import mezz.jei.api.ingredients.subtypes.UidContext;
-*///?}
+//?}
+import mezz.jei.api.ingredients.subtypes.UidContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.emi.emi.api.stack.EmiIngredient;
@@ -16,15 +15,15 @@ import net.minecraft.util.GsonHelper;
 
 import static dev.nolij.toomanyrecipeviewers.TooManyRecipeViewersMod.LOGGER;
 
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes", "unchecked", "removal"})
 public class TMRVStackSerializer implements EmiIngredientSerializer<TMRVStack> {
 
 	private static final String TYPE = "type";
 	private static final String TYPE_UID = "type_uid";
 	//? if >=21.1 {
 	private static final String DATA = "data";
-	//?} else
-	//private static final String UID = "uid";
+	//?}
+	private static final String UID = "uid";
 	private static final String AMOUNT = "amount";
 	private static final String CHANCE = "chance";
 	private static final String REMAINDER = "remainder";
@@ -46,16 +45,25 @@ public class TMRVStackSerializer implements EmiIngredientSerializer<TMRVStack> {
 		final var typeUID = GsonHelper.getAsString(object, TYPE_UID);
 		final var type = runtime.ingredientManager.getIngredientType(typeUID);
 		final var info = runtime.ingredientManager.getIngredientInfo(type);
+		if (info == null)
+			return EmiStack.EMPTY;
 
+		final Object ingredient;
 		//? if >=21.1 {
-		final var data = GsonHelper.getNonNull(object, DATA);
-		final var codec = info.getIngredientCodec();
-		final var decode = codec.parse(JsonOps.INSTANCE, data);
-		final var ingredient = decode.resultOrPartial(LOGGER::error).orElseThrow();
-		//?} else {
-		/*final var uid = GsonHelper.getAsString(object, UID);
-		final var ingredient = runtime.ingredientManager.getIngredientByUid(type, uid).orElseThrow();
-		*///?}
+		if (GsonHelper.isValidNode(object, DATA)) {
+			final var codec = info.getIngredientCodec();
+			if (codec == null)
+				return EmiStack.EMPTY;
+			final var decode = codec.parse(JsonOps.INSTANCE, GsonHelper.getNonNull(object, DATA));
+			ingredient = decode.resultOrPartial(LOGGER::error).orElseThrow();
+		} else
+		//?}
+		{
+			final var uid = GsonHelper.getAsString(object, UID);
+			ingredient = runtime.ingredientManager.getIngredientByUid(type, uid).orElse(null);
+			if (ingredient == null)
+				return EmiStack.EMPTY;
+		}
 
 		final var stack = runtime.ingredientManager.getEMIStack(type, ingredient);
 		
@@ -66,7 +74,7 @@ public class TMRVStackSerializer implements EmiIngredientSerializer<TMRVStack> {
 			if (remainderIngredient instanceof EmiStack remainderStack) {
 				stack.setRemainder(remainderStack);
 			} else {
-				LOGGER.error("Failure deserializing remainder for stack: {}", element.getAsString());
+				LOGGER.error("Failure deserializing remainder for stack: {}", element);
 			}
 		}
 		
@@ -81,12 +89,15 @@ public class TMRVStackSerializer implements EmiIngredientSerializer<TMRVStack> {
 
 		//? if >=21.1 {
 		final var codec = runtime.ingredientManager.getIngredientCodec(stack.type);
-		final DataResult<JsonElement> encode = codec.encodeStart(JsonOps.INSTANCE, stack.ingredient);
-		result.add(DATA, encode.resultOrPartial(LOGGER::error).orElseThrow());
-		//?} else {
-		/*final var helper = runtime.ingredientManager.getIngredientHelper(stack.type);
-		result.addProperty(UID, helper.getUniqueId(stack.ingredient, UidContext.Ingredient));
-		*///?}
+		if (codec != null) {
+			final DataResult<JsonElement> encode = codec.encodeStart(JsonOps.INSTANCE, stack.ingredient);
+			result.add(DATA, encode.resultOrPartial(LOGGER::error).orElseThrow());
+		} else
+		//?}
+		{
+			final var helper = runtime.ingredientManager.getIngredientHelper(stack.type);
+			result.addProperty(UID, helper.getUniqueId(stack.ingredient, UidContext.Ingredient));
+		}
 		
 		if (stack.getAmount() != 1L)
 			result.addProperty(AMOUNT, stack.getAmount());

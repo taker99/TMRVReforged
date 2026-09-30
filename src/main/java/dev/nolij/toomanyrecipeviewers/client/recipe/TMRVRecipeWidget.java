@@ -148,14 +148,18 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 	
 	@Override
 	public boolean mouseClicked(int mouseX, int mouseY, int button) {
-		return
-			handleInput(mouseX, mouseY, InputConstants.Type.MOUSE.getOrCreate(button), 0, InputType.SIMULATE) &&
-				handleInput(mouseX, mouseY, InputConstants.Type.MOUSE.getOrCreate(button), 0, InputType.EXECUTE);
+		final var key = InputConstants.Type.MOUSE.getOrCreate(button);
+		if (handleInputHandlers(mouseX, mouseY, key, 0, InputType.SIMULATE) &&
+			handleInputHandlers(mouseX, mouseY, key, 0, InputType.EXECUTE))
+			return true;
+		return handleInput(mouseX, mouseY, key, 0);
 	}
 	
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		return handleInput(EmiScreenManager.lastMouseX, EmiScreenManager.lastMouseY, InputConstants.getKey(keyCode, scanCode), modifiers, InputType.IMMEDIATE);
+		final var key = InputConstants.getKey(keyCode, scanCode);
+		return handleInputHandlers(EmiScreenManager.lastMouseX, EmiScreenManager.lastMouseY, key, modifiers, InputType.IMMEDIATE) ||
+			handleInput(EmiScreenManager.lastMouseX, EmiScreenManager.lastMouseY, key, modifiers);
 	}
 	
 	private static boolean containsPoint(ScreenRectangle area, int x, int y) {
@@ -166,7 +170,7 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 	
 	protected abstract boolean handleInput(int mouseX, int mouseY, InputConstants.Key key);
 	
-	private boolean handleInput(int mouseX, int mouseY, InputConstants.Key key, int modifiers, InputType inputType) {
+	private boolean handleInputHandlers(int mouseX, int mouseY, InputConstants.Key key, int modifiers, InputType inputType) {
 		final var input = new UserInput(key, mouseX, mouseY, modifiers, inputType);
 		
 		for (final var inputHandler : inputHandlers) {
@@ -177,6 +181,10 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 					return true;
 			}
 		}
+		return false;
+	}
+
+	private boolean handleInput(int mouseX, int mouseY, InputConstants.Key key, int modifiers) {
 		for (final var guiEventListener : guiEventListeners) {
 			final var area = guiEventListener.getArea();
 			if (containsPoint(area, mouseX, mouseY)) {
@@ -184,7 +192,7 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 				final var x = mouseX - position.x();
 				final var y = mouseY - position.y();
 				if (switch (key.getType()) {
-					case MOUSE -> guiEventListener.mouseReleased(x, y, key.getValue());
+					case MOUSE -> guiEventListener.mouseClicked(x, y, key.getValue());
 					case KEYSYM -> guiEventListener.keyPressed(x, y, key.getValue(), 0, modifiers);
 					default -> false;
 				})

@@ -343,7 +343,7 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 			})
 			.toList();
 		
-		registerIngredients(jeiType, ingredients);
+		registerIngredients(jeiType, validIngredients);
 		
 		if (!this.listeners.isEmpty()) {
 			final var typedIngredients = validIngredients.stream()
@@ -473,7 +473,8 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	@Override
 	public <V> Optional<V> getIngredientByUid(IIngredientType<V> jeiType, String uid) {
 		if (jeiType == VanillaTypes.ITEM_STACK || jeiType == fluidHelper.getFluidIngredientType())
-			return Optional.ofNullable(((ITypedIngredient<V>) ingredientUidLookup.getOrDefault(new TypedIngredientUID(jeiType, uid), null)).getIngredient());
+			return Optional.ofNullable((ITypedIngredient<V>) ingredientUidLookup.get(new TypedIngredientUID(jeiType, uid)))
+				.map(ITypedIngredient::getIngredient);
 		
 		return Optional.ofNullable((V) ingredientUidLookup.getOrDefault(new TypedIngredientUID(jeiType, uid), null));
 	}
@@ -487,7 +488,8 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 		if (jeiType == VanillaTypes.ITEM_STACK || jeiType == fluidHelper.getFluidIngredientType())
 			return Optional.ofNullable((ITypedIngredient<V>) ingredientUidLookup.getOrDefault(new TypedIngredientUID(jeiType, uid), null));
 		
-		return Optional.ofNullable((ITypedIngredient<V>) getEMIStack(jeiType, (V) ingredientUidLookup.getOrDefault(new TypedIngredientUID(jeiType, uid), null)));
+		return getIngredientByUid(jeiType, uid)
+			.map(ingredient -> (ITypedIngredient<V>) getEMIStack(jeiType, ingredient));
 	}
 	
 	@Override
@@ -614,8 +616,10 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	}
 	
 	@Override
+	@SuppressWarnings("unchecked")
 	public void addAlias(Fluid fluid, String alias) {
-		addAlias(fluidHelper.getFluidIngredientType(), fluid, alias);
+		final var type = (IIngredientTypeWithSubtypes<Fluid, ?>) fluidHelper.getFluidIngredientType();
+		addAlias(type, fluid, alias);
 	}
 	
 	@Override
@@ -624,8 +628,10 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	}
 	
 	@Override
+	@SuppressWarnings("unchecked")
 	public void addAliases(Fluid fluid, Collection<String> aliases) {
-		addAliases(fluidHelper.getFluidIngredientType(), fluid, aliases);
+		final var type = (IIngredientTypeWithSubtypes<Fluid, ?>) fluidHelper.getFluidIngredientType();
+		addAliases(type, fluid, aliases);
 	}
 	
 	@Override

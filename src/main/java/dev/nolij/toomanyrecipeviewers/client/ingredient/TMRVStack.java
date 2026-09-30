@@ -58,7 +58,12 @@ public class TMRVStack<T> extends EmiStack {
 	
 	@Override
 	public EmiStack copy() {
-		return new TMRVStack<>(type, helper, renderer, helper.copyIngredient(ingredient));
+		final var copy = new TMRVStack<>(type, helper, renderer, helper.copyIngredient(ingredient));
+		copy.setAmount(getAmount());
+		copy.setChance(getChance());
+		copy.setRemainder(getRemainder().copy());
+		copy.comparison = comparison;
+		return copy;
 	}
 	
 	@Override
