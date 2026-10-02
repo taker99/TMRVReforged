@@ -17,7 +17,7 @@ werden.
 ## Arbeitsbereich und Grenzen
 
 - Änderungen dieses Auftrags betreffen ausschließlich dieses Repository.
-- `E:\Minecraft\ModDev\BuildUpExp\TDEconemy` bleibt unverändert und dient nur
+- `E:\Minecraft\ModDev\Mods\TDEconemy` bleibt unverändert und dient nur
   als Strukturreferenz.
 - Vor Änderungen `rtk git status --short` und relevante Diffs prüfen.
 - Vorhandene fremde Änderungen niemals überschreiben, zurücksetzen oder
