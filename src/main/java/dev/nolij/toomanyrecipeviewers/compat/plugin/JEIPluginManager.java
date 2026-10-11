@@ -66,7 +66,11 @@ public final class JEIPluginManager {
 		for (final var scanData : ModList.get().getAllScanData()) {
 			for (final var annotation : scanData.getAnnotations()) {
 				if (Objects.equals(annotation.annotationType(), annotationType)) {
-					result.add(Objects.requireNonNull(REFRACTION.getClassOrNull(annotation.memberName())).asSubclass(instanceClass));
+					try {
+						result.add(Objects.requireNonNull(REFRACTION.getClassOrNull(annotation.memberName())).asSubclass(instanceClass));
+					} catch (Throwable t) {
+						LOGGER.error("Failed to resolve JEI plugin class {}", annotation.memberName(), t);
+					}
 				}
 			}
 		}

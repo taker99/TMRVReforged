@@ -564,6 +564,10 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 				.map(x -> category(x).getJEICategory())
 				.filter(Objects::nonNull)
 				.map(x -> (IRecipeCategory<?>) x);
+			if (includeHidden) {
+				categoryStream = Stream.concat(categoryStream, jeiRecipeCategories.stream()
+					.filter(x -> getRecipesStream(x.getRecipeType(), focuses, true).findAny().isPresent()));
+			}
 			
 			// non-empty recipeCategories => narrow the results to just ones in recipeCategories
 			if (!recipeCategories.isEmpty()) {
@@ -571,11 +575,40 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			}
 		}
 		
-		return categoryStream.sorted(ResourceLocationHolderComparator.create(x -> x.getRecipeType().getUid()));
+		return categoryStream
+			.filter(x -> includeHidden || !hiddenCategories.contains(category(x.getRecipeType()).getEMICategory()))
+			.distinct()
+			.sorted(ResourceLocationHolderComparator.create(x -> x.getRecipeType().getUid()));
 	}
 	
 	private <T> Stream<T> getRecipesStream(RecipeType<T> recipeType, IFocusGroup focuses, boolean includeHidden) {
-		return getRecipes(category(recipeType), focuses);
+		final var category = category(recipeType);
+		if (!includeHidden && hiddenCategories.contains(category.getEMICategory()))
+			return Stream.empty();
+
+		final var recipes = getRecipes(category, focuses);
+		if (includeHidden && !focuses.isEmpty()) {
+			// EMI removes hidden recipes from its ingredient indexes when baking.
+			return Stream.concat(recipes, getRecipes(category, FocusGroup.EMPTY)
+				.filter(x -> {
+					final var emiRecipe = category.recipe(x).getEMIRecipe();
+					return emiRecipe != null && (hiddenRecipes.contains(emiRecipe) || hiddenCategories.contains(category.getEMICategory())) &&
+						focuses.getAllFocuses().stream().anyMatch(focus -> matchesFocus(emiRecipe, focus));
+				}))
+				.distinct();
+		}
+		return includeHidden ? recipes : recipes.filter(x -> !hiddenRecipes.contains(category.recipe(x).getEMIRecipe()));
+	}
+
+	private boolean matchesFocus(EmiRecipe recipe, IFocus<?> focus) {
+		final List<? extends EmiIngredient> ingredients = switch (focus.getRole()) {
+			case INPUT -> Stream.concat(recipe.getInputs().stream(), recipe.getCatalysts().stream()).toList();
+			case OUTPUT -> recipe.getOutputs();
+			case CATALYST -> EmiApi.getRecipeManager().getWorkstations(recipe.getCategory());
+			default -> List.of();
+		};
+		final var stack = ingredientManager.getEMIStack(focus.getTypedValue());
+		return ingredients.stream().flatMap(x -> x.getEmiStacks().stream()).anyMatch(stack::equals);
 	}
 	
 	private <T> Stream<ITypedIngredient<?>> getRecipeCatalystStream(RecipeType<T> recipeType, boolean includeHidden) {
@@ -1087,8 +1120,6 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 		
 		replacedRecipeIDs.clear();
 		replacementRecipes.clear();
-		hiddenRecipes.clear();
-		hiddenCategories.clear();
 	}
 	//endregion
 	
@@ -1484,7 +1515,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 						
 						@Override
 						public SlotWidget getInputWidget(int slot, int x, int y) {
-							return new SlotWidget(slot <= emiInputs.size() ? emiInputs.get(slot) : EmiStack.EMPTY, x, y);
+							return new SlotWidget(slot < emiInputs.size() ? emiInputs.get(slot) : EmiStack.EMPTY, x, y);
 						}
 						
 						@Override
@@ -1663,7 +1694,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			}
 			
 			@SuppressWarnings("DataFlowIssue")
-			private @NotNull EmiBrewingRecipe convertEMIBrewingRecipe() {
+			private @NotNull EmiRecipe convertEMIBrewingRecipe() {
 				final var jeiRecipe = (IJeiBrewingRecipe) this.jeiRecipe;
 				
 				final var extension = getBrewingCategoryExtension(jeiRecipe);
@@ -1672,6 +1703,15 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 //					return new ExtendedBrewingRecipe(runtime, jeiRecipe, extension.extension(), getID());
 				}
 				
+				if (jeiRecipe.getPotionInputs().size() > 1)
+					return new TMRVRecipe<>(runtime, Category.this, this.jeiRecipe, getID()) {
+						@Override
+						public List<EmiStack> getOutputs() {
+							// JEI draws one result, but EMI models a batch of three bottles.
+							return List.of(ingredientManager.getEMIStack(jeiRecipe.getPotionOutput()).setAmount(3));
+						}
+					};
+
 				return new EmiBrewingRecipe(
 					ingredientManager.getEMIStack(jeiRecipe.getPotionInputs().getFirst()),
 					ingredientManager.getEMIIngredient(jeiRecipe.getIngredients().stream()),

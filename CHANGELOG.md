@@ -1,5 +1,9 @@
 ## 9.0.8
 
+- Skip unloadable or invalid JEI plugin classes so other plugins can still initialize.
+- Fix crafting fallback displays failing on unused input slots.
+- Preserve all potion input alternatives in brewing recipes.
+- Respect hidden recipes and categories in lookups, including focused lookups that explicitly include hidden results.
 - Fix recipe lookups without an ingredient focus returning no recipes.
 - Preserve existing plugin configuration files when reading fails.
 - Serialize ingredient and search alias registration to prevent missing entries during parallel plugin loading.
