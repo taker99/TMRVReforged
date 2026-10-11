@@ -44,10 +44,16 @@ final class TMRVDragDropHandler implements EmiDragDropHandler<Screen> {
 		if (ingredient.isEmpty())
 			return false;
 
-		for (final var target : getTargets(screen, ingredient.get())) {
-			if (target.getArea().contains(x, y)) {
-				target.accept(ingredient.get().getIngredient());
-				return true;
+		for (final var handler : screenHelper.<Screen>getGhostIngredientHandlers(screen)) {
+			for (final var target : handler.getTargetsTyped(screen, ingredient.get(), false)) {
+				if (target.getArea().contains(x, y)) {
+					try {
+						target.accept(ingredient.get().getIngredient());
+					} finally {
+						handler.onComplete();
+					}
+					return true;
+				}
 			}
 		}
 		return false;

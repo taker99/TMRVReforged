@@ -1,6 +1,7 @@
 package dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.ingredient;
 
 import dev.emi.emi.api.stack.EmiIngredient;
+import dev.emi.emi.api.stack.FluidEmiStack;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.TankWidget;
 import dev.emi.emi.screen.EmiScreenManager;
@@ -195,7 +196,10 @@ public class TMRVTankWidget extends TankWidget implements ITMRVRecipeSlotDrawabl
 	
 	@Override
 	public Optional<ITypedIngredient<?>> getDisplayedIngredient() {
-		return getAllIngredients().findFirst();
+		return getStack().getEmiStacks().stream()
+			.filter(FluidEmiStack.class::isInstance)
+			.findFirst()
+			.map(ingredientManager::getTypedIngredient);
 	}
 
 	//? if >=21.1 {

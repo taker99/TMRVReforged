@@ -29,7 +29,7 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           
       - name: Build
-        run: ./gradlew build --stacktrace --no-daemon
+        run: ./gradlew :20.1-lexforge:build :21.1-neoforge:build distributionArtifacts --stacktrace --no-daemon
         
       - name: Upload artifacts
         if: always()
@@ -37,4 +37,6 @@ jobs:
         with:
           name: toomanyrecipeviewers
           path: |
-            **/build/libs/toomanyrecipeviewers*.jar
+            versions/*/build/libs/TMRVReforged-*.jar
+            versions/*/build/libs/TMRVReforged-*-source.zip
+          if-no-files-found: error

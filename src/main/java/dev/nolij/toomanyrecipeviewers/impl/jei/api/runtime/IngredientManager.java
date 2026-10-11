@@ -262,18 +262,18 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	}
 	
 	//region IIngredientManager	
-	public @Unmodifiable <V> Collection<ITypedIngredient<V>> getAllTypedIngredients(IIngredientType<V> jeiType) {
+	public synchronized @Unmodifiable <V> Collection<ITypedIngredient<V>> getAllTypedIngredients(IIngredientType<V> jeiType) {
 		//noinspection rawtypes,unchecked
-		return (Collection) typedIngredients.get(jeiType);
+		return (Collection) List.copyOf(typedIngredients.get(jeiType));
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public @Unmodifiable <V> Collection<V> getAllIngredients(IIngredientType<V> jeiType) {
+	public synchronized @Unmodifiable <V> Collection<V> getAllIngredients(IIngredientType<V> jeiType) {
 		if (jeiType == VanillaTypes.ITEM_STACK && itemStacks != null) {
-			return (Collection<V>) itemStacks;
+			return (Collection<V>) List.copyOf(itemStacks);
 		} else if (jeiType == fluidHelper.getFluidIngredientType() && fluidStacks != null) {
-			return (Collection<V>) fluidStacks;
+			return (Collection<V>) List.copyOf(fluidStacks);
 		}
 		
 		return getAllTypedIngredients(jeiType)
@@ -310,8 +310,8 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	//?}
 	
 	@Override
-	public @Unmodifiable Collection<IIngredientType<?>> getRegisteredIngredientTypes() {
-		return classTypeMap.values();
+	public synchronized @Unmodifiable Collection<IIngredientType<?>> getRegisteredIngredientTypes() {
+		return List.copyOf(classTypeMap.values());
 	}
 	
 	@Override
@@ -355,7 +355,7 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	}
 	
 	@Override
-	public <V> void removeIngredientsAtRuntime(IIngredientType<V> jeiType, Collection<V> ingredients) {
+	public synchronized <V> void removeIngredientsAtRuntime(IIngredientType<V> jeiType, Collection<V> ingredients) {
 		if (locked) {
 			LOGGER.error("Tried to remove ingredients after registry is locked", new IllegalStateException());
 			return;
@@ -553,7 +553,7 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 	
 	//region IIngredientAliasRegistration
 	@Override
-	public <I> void addAlias(ITypedIngredient<I> typedIngredient, String alias) {
+	public synchronized <I> void addAlias(ITypedIngredient<I> typedIngredient, String alias) {
 		if (locked)
 			throw new IllegalStateException("Tried to add ingredient alias after registry is locked");
 		
@@ -654,7 +654,7 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
     }
     //?}
 
-    private <V> void registerIngredients(IIngredientType<V> jeiType, Collection<V> ingredients) {
+    private synchronized <V> void registerIngredients(IIngredientType<V> jeiType, Collection<V> ingredients) {
 		if (locked)
 			throw new IllegalStateException("Tried to add ingredients after registry is locked");
 		
@@ -713,7 +713,7 @@ public class IngredientManager implements IIngredientManager, IModIngredientRegi
 		}));
 	}
 	
-	private <V> void registerIngredientType(IngredientInfo<V> ingredientInfo, Collection<V> ingredients) {
+	private synchronized <V> void registerIngredientType(IngredientInfo<V> ingredientInfo, Collection<V> ingredients) {
 		if (locked)
 			throw new IllegalStateException("Tried to add ingredient type after registry is locked");
 		

@@ -5,7 +5,7 @@ import tempfile
 
 
 root = Path(__file__).resolve().parents[1]
-source = (root / "src/main/java/dev/nolij/toomanyrecipeviewers/impl/jei/api/gui/builder/TMRVIngredientCollector.java").read_text()
+source = (root / "src/main/java/dev/nolij/toomanyrecipeviewers/impl/jei/api/gui/builder/TMRVIngredientCollector.java").read_text(encoding="utf-8")
 
 
 def method(signature):
@@ -89,6 +89,6 @@ class TMRVIngredientCollector {
 
 with tempfile.TemporaryDirectory(prefix="tmrv-fluid-test-") as directory:
     java_file = Path(directory) / "TMRVIngredientCollector.java"
-    java_file.write_text(harness)
+    java_file.write_text(harness, encoding="utf-8")
     subprocess.run(["javac", str(java_file)], check=True)
     subprocess.run(["java", "-ea", "-cp", directory, "TMRVIngredientCollector"], check=True)

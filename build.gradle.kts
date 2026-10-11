@@ -332,6 +332,10 @@ tasks.assemble {
 	dependsOn(outputJar, sourcesJar, sourceArchive)
 }
 
+tasks.check {
+	dependsOn(rootProject.tasks.named("auditRegressions"), rootProject.tasks.named("pluginRegressions"), rootProject.tasks.named("flowingFluidIngredients"))
+}
+
 rootProject.tau.publishing.modArtifact("${modLoader.displayName} ${minecraftVersion.conciseName}") {
 	files(provider { outputJar.get().archiveFile }, provider { sourcesJar.get().archiveFile }, provider { sourceArchive.get().archiveFile })
 

@@ -21,6 +21,7 @@
 		"NormalizedTypedItemStackMixin",
 		"PacketRecipeTransferAccessor",
 		"RecipeDisplayMixin",
+		"RecipeScreenMixin",
 		"SmithingRecipeCategoryAccessor",
 		"TMRVStackMixin",
 		"TypedIngredientMixin",

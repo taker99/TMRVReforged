@@ -2,6 +2,7 @@ package dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.ingredient;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.emi.emi.api.stack.EmiIngredient;
+import dev.emi.emi.api.stack.ListEmiIngredient;
 import dev.emi.emi.api.widget.Bounds;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.runtime.EmiDrawContext;
@@ -244,7 +245,19 @@ public class TMRVSlotWidget extends SlotWidget implements ITMRVRecipeSlotDrawabl
 	
 	@Override
 	public Optional<ITypedIngredient<?>> getDisplayedIngredient() {
-		return getAllIngredients().findFirst();
+		return getDisplayedIngredient(ingredientManager, getStack());
+	}
+
+	static Optional<ITypedIngredient<?>> getDisplayedIngredient(IngredientManager ingredientManager, EmiIngredient ingredient) {
+		if (ingredient instanceof ListEmiIngredient list) {
+			final var alternatives = list.getIngredients();
+			if (alternatives.isEmpty())
+				return Optional.empty();
+			// Use EMI's one-second cycle and its grouped alternatives, not the flattened stack list.
+			final var index = (int) ((System.currentTimeMillis() / 1000) % alternatives.size());
+			return getDisplayedIngredient(ingredientManager, alternatives.get(index));
+		}
+		return ingredient.getEmiStacks().stream().findFirst().map(ingredientManager::getTypedIngredient);
 	}
 
 	//? if >=21.1 {

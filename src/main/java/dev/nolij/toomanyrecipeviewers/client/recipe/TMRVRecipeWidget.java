@@ -52,11 +52,12 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.network.chat.FormattedText;
 import org.jetbrains.annotations.Unmodifiable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
+public abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 	
 	protected static class RecipeSlotsView implements IRecipeSlotsView {
 		protected final List<IRecipeSlotView> slots = new ArrayList<>();
@@ -84,6 +85,8 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 	private final ArrayList<IRecipeWidget> recipeWidgets = new ArrayList<>();
 	private final ArrayList<IJeiInputHandler> inputHandlers = new ArrayList<>();
 	private final ArrayList<IJeiGuiEventListener> guiEventListeners = new ArrayList<>();
+	private @Nullable IJeiGuiEventListener pressedListener;
+	private @Nullable IJeiInputHandler pressedInputHandler;
 	
 	TMRVRecipeWidget(WidgetHolder widgets, int width, int height) {
 		this.widgets = widgets;
@@ -148,11 +151,62 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 	
 	@Override
 	public boolean mouseClicked(int mouseX, int mouseY, int button) {
+		pressedListener = null;
+		pressedInputHandler = null;
 		final var key = InputConstants.Type.MOUSE.getOrCreate(button);
 		if (handleInputHandlers(mouseX, mouseY, key, 0, InputType.SIMULATE) &&
 			handleInputHandlers(mouseX, mouseY, key, 0, InputType.EXECUTE))
 			return true;
 		return handleInput(mouseX, mouseY, key, 0);
+	}
+
+	public boolean mouseReleased(double mouseX, double mouseY, int button) {
+		final var listener = pressedListener;
+		pressedListener = null;
+		pressedInputHandler = null;
+		if (listener == null)
+			return false;
+		final var position = listener.getArea().position();
+		return listener.mouseReleased(mouseX - position.x(), mouseY - position.y(), button);
+	}
+
+	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+		if (pressedInputHandler != null) {
+			final var position = pressedInputHandler.getArea().position();
+			return pressedInputHandler.handleMouseDragged(mouseX - position.x(), mouseY - position.y(), InputConstants.Type.MOUSE.getOrCreate(button), deltaX, deltaY);
+		}
+		if (pressedListener != null) {
+			final var position = pressedListener.getArea().position();
+			return pressedListener.mouseDragged(mouseX - position.x(), mouseY - position.y(), button, deltaX, deltaY);
+		}
+		return false;
+	}
+
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		for (final var handler : inputHandlers) {
+			final var area = handler.getArea();
+			final var position = area.position();
+			if (containsPoint(area, mouseX, mouseY) && handler.handleMouseScrolled(mouseX - position.x(), mouseY - position.y(), /*? if >=21.1 {*/scrollX, /*?}*/scrollY))
+				return true;
+		}
+		for (final var listener : guiEventListeners) {
+			final var area = listener.getArea();
+			final var position = area.position();
+			if (containsPoint(area, mouseX, mouseY) && listener.mouseScrolled(mouseX - position.x(), mouseY - position.y(), /*? if >=21.1 {*/scrollX, /*?}*/scrollY))
+				return true;
+		}
+		return false;
+	}
+
+	public void mouseMoved(double mouseX, double mouseY) {
+		for (final var handler : inputHandlers) {
+			final var position = handler.getArea().position();
+			handler.handleMouseMoved(mouseX - position.x(), mouseY - position.y());
+		}
+		for (final var listener : guiEventListeners) {
+			final var position = listener.getArea().position();
+			listener.mouseMoved(mouseX - position.x(), mouseY - position.y());
+		}
 	}
 	
 	@Override
@@ -162,7 +216,7 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 			handleInput(EmiScreenManager.lastMouseX, EmiScreenManager.lastMouseY, key, modifiers);
 	}
 	
-	private static boolean containsPoint(ScreenRectangle area, int x, int y) {
+	private static boolean containsPoint(ScreenRectangle area, double x, double y) {
 		return
 			area.top() <= y && y <= area.bottom() &&
 				area.left() <= x && x <= area.right();
@@ -177,8 +231,11 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 			final var area = inputHandler.getArea();
 			if (containsPoint(area, mouseX, mouseY)) {
 				final var position = area.position();
-				if (inputHandler.handleInput(mouseX - position.x(), mouseY - position.y(), input))
+				if (inputHandler.handleInput(mouseX - position.x(), mouseY - position.y(), input)) {
+					if (key.getType() == InputConstants.Type.MOUSE && inputType == InputType.EXECUTE)
+						pressedInputHandler = inputHandler;
 					return true;
+				}
 			}
 		}
 		return false;
@@ -195,8 +252,11 @@ abstract class TMRVRecipeWidget extends Widget implements IRecipeExtrasBuilder {
 					case MOUSE -> guiEventListener.mouseClicked(x, y, key.getValue());
 					case KEYSYM -> guiEventListener.keyPressed(x, y, key.getValue(), 0, modifiers);
 					default -> false;
-				})
+				}) {
+					if (key.getType() == InputConstants.Type.MOUSE)
+						pressedListener = guiEventListener;
 					return true;
+				}
 			}
 		}
 		

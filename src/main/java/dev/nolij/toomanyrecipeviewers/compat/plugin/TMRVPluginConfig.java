@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -148,14 +149,22 @@ public class TMRVPluginConfig {
 		if (result != null)
 			return result;
 		
-		return new TMRVPluginConfig();
+		final var defaults = new TMRVPluginConfig();
+		if (file != null && !file.exists())
+			defaults.write(file);
+		return defaults;
 	}
 	
 	public static @Nullable TMRVPluginConfig read(final File file) {
 		if (file == null || !file.exists())
 			return null;
 		
-		return read(new FileReader(file));
+		try (final var reader = new FileReader(file)) {
+			return read(reader);
+		} catch (IOException e) {
+			LOGGER.error("Error reading config {}", file, e);
+			return null;
+		}
 	}
 	
 	public static @Nullable TMRVPluginConfig read(final Reader input) {

@@ -18,10 +18,12 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY_PR }}
           cache-read-only: true
       - name: Build
-        run: ./gradlew build --no-daemon
+        run: ./gradlew :20.1-lexforge:build :21.1-neoforge:build distributionArtifacts --no-daemon
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: toomanyrecipeviewers
           path: |
-            **/toomanyrecipeviewers-*.jar
+            versions/*/build/libs/TMRVReforged-*.jar
+            versions/*/build/libs/TMRVReforged-*-source.zip
+          if-no-files-found: error

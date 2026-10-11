@@ -1,5 +1,14 @@
 ## 9.0.8
 
+- Fix recipe lookups without an ingredient focus returning no recipes.
+- Preserve existing plugin configuration files when reading fails.
+- Serialize ingredient and search alias registration to prevent missing entries during parallel plugin loading.
+- Isolate failures in plugin configuration callbacks so other plugins can still load.
+- Forward mouse movement, scrolling, dragging, and release events to JEI recipe widgets.
+- Report the ingredient actually displayed by EMI slots and fluid tanks to JEI callbacks.
+- Complete JEI ghost ingredient handlers after accepting a drop.
+- Restore CI artifact uploads for TMRVReforged JARs and source archives.
+
 - Rename the fork to TMRVReforged and point project links to its own repository.
 
 - Include fork attribution and distribution instructions in binary and source artifacts.

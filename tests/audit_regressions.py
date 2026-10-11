@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import os
 
 
 root = Path(__file__).resolve().parents[1]
@@ -16,7 +17,7 @@ def read_source(file):
             ["rtk", "proxy", "git", "show", f"{sys.argv[1]}:{path.as_posix()}"],
             cwd=root, text=True, encoding="utf-8",
         )
-    return (root / path).read_text()
+    return (root / path).read_text(encoding="utf-8")
 
 
 def methods(file, *signatures):
@@ -168,18 +169,35 @@ class AuditRegressions {
     interface IJeiInputHandler {
         ScreenRectangle getArea();
         boolean handleInput(int x, int y, UserInput input);
+        default boolean handleMouseScrolled(double x, double y, double sx, double sy) { return false; }
+        default boolean handleMouseDragged(double x, double y, InputConstants.Key key, double dx, double dy) { return false; }
+        default void handleMouseMoved(double x, double y) {}
     }
-    static class Listener {
-        int clicks, releases, keys;
+    interface IJeiGuiEventListener {
+        ScreenRectangle getArea();
+        boolean mouseClicked(int x, int y, int button);
+        boolean keyPressed(int x, int y, int key, int scan, int modifiers);
+        boolean mouseReleased(double x, double y, int button);
+        boolean mouseDragged(double x, double y, int button, double dx, double dy);
+        boolean mouseScrolled(double x, double y, double sx, double sy);
+        void mouseMoved(double x, double y);
+    }
+    static class Listener implements IJeiGuiEventListener {
+        int clicks, releases, keys, drags, scrolls, moves;
         final ScreenRectangle area = new ScreenRectangle(10, 20, 30, 40);
-        ScreenRectangle getArea() { return area; }
-        boolean mouseClicked(int x, int y, int button) { assert x == 5 && y == 5; clicks++; return true; }
-        boolean mouseReleased(int x, int y, int button) { releases++; return true; }
-        boolean keyPressed(int x, int y, int key, int scan, int modifiers) { assert modifiers == 4; keys++; return true; }
+        public ScreenRectangle getArea() { return area; }
+        public boolean mouseClicked(int x, int y, int button) { assert x == 5 && y == 5; clicks++; return true; }
+        public boolean mouseReleased(double x, double y, int button) { assert x == 40 && y == 40; releases++; return true; }
+        public boolean mouseDragged(double x, double y, int button, double dx, double dy) { assert x == 40 && y == 40 && dx == 2 && dy == 3; drags++; return true; }
+        public boolean mouseScrolled(double x, double y, double sx, double sy) { assert x == 5 && y == 5 && sx == 2 && sy == -1; scrolls++; return true; }
+        public void mouseMoved(double x, double y) { assert x == 40 && y == 40; moves++; }
+        public boolean keyPressed(int x, int y, int key, int scan, int modifiers) { assert modifiers == 4; keys++; return true; }
     }
     static class Widget {
         final List<IJeiInputHandler> inputHandlers = new ArrayList<>();
-        final List<Listener> guiEventListeners = new ArrayList<>();
+        final List<IJeiGuiEventListener> guiEventListeners = new ArrayList<>();
+        IJeiGuiEventListener pressedListener;
+        IJeiInputHandler pressedInputHandler;
         int fallbackCalls;
         protected boolean handleInput(int x, int y, InputConstants.Key key) { fallbackCalls++; return true; }
         __WIDGET__
@@ -257,15 +275,29 @@ class AuditRegressions {
         assert widget.mouseClicked(15, 25, 0);
         assert listener.clicks == 1 && listener.releases == 0 && widget.fallbackCalls == 0;
         assert widget.keyPressed(65, 0, 4) && listener.keys == 1;
+        assert widget.mouseDragged(50, 60, 0, 2, 3) && listener.drags == 1;
+        assert widget.mouseReleased(50, 60, 0) && listener.releases == 1;
+        assert !widget.mouseReleased(50, 60, 0) && listener.releases == 1;
+        assert !widget.mouseDragged(50, 60, 0, 2, 3);
+        assert widget.mouseScrolled(15, 25, 2, -1) && listener.scrolls == 1;
+        assert !widget.mouseScrolled(50, 60, 2, -1);
+        widget.mouseMoved(50, 60); assert listener.moves == 1;
         assert widget.mouseClicked(50, 50, 0) && widget.fallbackCalls == 1 && listener.clicks == 1;
         var phases = new ArrayList<InputType>();
+        var drags = new ArrayList<String>();
         widget.inputHandlers.add(new IJeiInputHandler() {
             public ScreenRectangle getArea() { return listener.area; }
             public boolean handleInput(int x, int y, UserInput input) { assert x == 5 && y == 5; phases.add(input.inputType()); return true; }
+            public boolean handleMouseDragged(double x, double y, InputConstants.Key key, double dx, double dy) { assert x == 40 && y == 40; drags.add("drag"); return true; }
+            public boolean handleMouseScrolled(double x, double y, double sx, double sy) { assert x == 5 && y == 5; return true; }
         });
         assert widget.mouseClicked(15, 25, 0);
         assert phases.equals(List.of(InputType.SIMULATE, InputType.EXECUTE));
         assert listener.clicks == 1;
+        assert widget.mouseDragged(50, 60, 0, 2, 3) && drags.size() == 1;
+        assert widget.mouseScrolled(15, 25, 2, -1) && listener.scrolls == 1;
+        assert !widget.mouseReleased(50, 60, 0);
+        assert !widget.mouseDragged(50, 60, 0, 2, 3);
     }
     public static void main(String[] args) {
         var checks = List.of(
@@ -304,6 +336,8 @@ harness = harness.replace("__SERIALIZER__", methods(
 ))
 widget_signatures = [
     "public boolean mouseClicked(", "public boolean keyPressed(",
+    "public boolean mouseReleased(", "public boolean mouseDragged(",
+    "public boolean mouseScrolled(", "public void mouseMoved(",
     "private static boolean containsPoint(",
 ]
 if "private boolean handleInputHandlers(" in read_source("client/recipe/TMRVRecipeWidget.java"):
@@ -311,10 +345,10 @@ if "private boolean handleInputHandlers(" in read_source("client/recipe/TMRVReci
 widget_signatures.append("private boolean handleInput(")
 harness = harness.replace("__WIDGET__", methods("client/recipe/TMRVRecipeWidget.java", *widget_signatures))
 
-gson_root = Path.home() / ".gradle/caches/modules-2/files-2.1/com.google.code.gson/gson"
+gson_root = Path(os.environ.get("GRADLE_USER_HOME", Path.home() / ".gradle")) / "caches/modules-2/files-2.1/com.google.code.gson/gson"
 gson = next(gson_root.rglob("gson-*.jar"))
 with tempfile.TemporaryDirectory(prefix="tmrv-audit-test-") as directory:
     java_file = Path(directory) / "AuditRegressions.java"
-    java_file.write_text(harness)
+    java_file.write_text(harness, encoding="utf-8")
     subprocess.run(["javac", "-cp", str(gson), str(java_file)], check=True)
-    subprocess.run(["java", "-ea", "-cp", f"{directory};{gson}", "AuditRegressions"], check=True)
+    subprocess.run(["java", "-ea", "-cp", os.pathsep.join((directory, str(gson))), "AuditRegressions"], check=True)

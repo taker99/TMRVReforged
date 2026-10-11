@@ -506,6 +506,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			final var emiRecipe = Objects.requireNonNull(recipe.getEMIRecipe());
 			synchronized (emiRegistryLock) {
 				registry.addRecipe(emiRecipe);
+				recipe.registered = true;
 			}
 			if (vanillaJEITypeEMICategoryMap.containsKey(jeiRecipeType) && 
 				!(emiRecipe instanceof ExtendedRecipe<?>)) {
@@ -1050,6 +1051,14 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 	}
 	
 	private <T> Stream<T> getRecipes(Category<T> category, IFocusGroup focusGroup) {
+		if (focusGroup.isEmpty()) {
+			synchronized (category.jeiRecipeMap) {
+				return category.jeiRecipeMap.entrySet().stream()
+					.filter(entry -> entry.getValue().registered)
+					.map(Map.Entry::getKey)
+					.toList().stream();
+			}
+		}
 		return focusGroup.getAllFocuses().stream().flatMap(x -> getRecipes(category, x)).distinct();
 	}
 	
@@ -1248,6 +1257,7 @@ public class RecipeManager implements IRecipeManager, IRecipeCategoryRegistratio
 			
 			private @Nullable T jeiRecipe;
 			private @Nullable EmiRecipe emiRecipe;
+			private volatile boolean registered;
 			
 			private @Nullable ResourceLocation id = null;
 			private @Nullable Plugin plugin = null;

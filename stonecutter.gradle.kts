@@ -19,6 +19,30 @@ idea.module {
 project.group = "maven_group"()
 project.version = tau.versioning.version("mod_version"(), project.properties["release_channel"])
 
+tasks.register<Exec>("auditRegressions") {
+	group = "verification"
+	environment("GRADLE_USER_HOME", gradle.gradleUserHomeDir.absolutePath)
+	commandLine("python", rootDir.resolve("tests/audit_regressions.py"))
+}
+
+tasks.register<Exec>("pluginRegressions") {
+	group = "verification"
+	environment("GRADLE_USER_HOME", gradle.gradleUserHomeDir.absolutePath)
+	commandLine("python", rootDir.resolve("tests/plugin_regressions.py"))
+}
+
+tasks.register<Exec>("flowingFluidIngredients") {
+	group = "verification"
+	commandLine("python", rootDir.resolve("tests/flowing_fluid_ingredients.py"))
+}
+
+tasks.register<Exec>("distributionArtifacts") {
+	group = "verification"
+	environment("GRADLE_USER_HOME", gradle.gradleUserHomeDir.absolutePath)
+	dependsOn(":20.1-lexforge:assemble", ":21.1-neoforge:assemble")
+	commandLine("python", rootDir.resolve("tests/distribution_artifacts.py"))
+}
+
 tasks.register("runClientActive") {
 	group = "project"
 	dependsOn("${stonecutter.current?.project}:runClient")
