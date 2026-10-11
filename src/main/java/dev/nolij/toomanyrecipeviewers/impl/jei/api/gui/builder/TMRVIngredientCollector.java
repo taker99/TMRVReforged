@@ -1,0 +1,179 @@
+package dev.nolij.toomanyrecipeviewers.impl.jei.api.gui.builder;
+
+import dev.emi.emi.api.stack.EmiIngredient;
+import dev.emi.emi.api.stack.EmiStack;
+import dev.emi.emi.api.stack.FluidEmiStack;
+import dev.nolij.toomanyrecipeviewers.impl.ingredient.TMRVStack;
+import dev.nolij.toomanyrecipeviewers.impl.jei.api.runtime.IngredientManager;
+import dev.nolij.toomanyrecipeviewers.impl.ingredient.ErrorIngredient;
+import dev.nolij.toomanyrecipeviewers.util.IStackish;
+import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.builder.IIngredientAcceptor;
+import mezz.jei.api.gui.builder.IIngredientConsumer;
+import mezz.jei.api.ingredients.IIngredientHelper;
+import mezz.jei.api.ingredients.IIngredientRenderer;
+import mezz.jei.api.ingredients.IIngredientType;
+import mezz.jei.api.ingredients.ITypedIngredient;
+import mezz.jei.library.ingredients.TypedIngredient;
+import mezz.jei.library.ingredients.itemStacks.TypedItemStack;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.material.Fluid;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+@SuppressWarnings({"NonExtendableApiUsage", "unchecked", "UnstableApiUsage"})
+public class TMRVIngredientCollector implements IIngredientAcceptor<TMRVIngredientCollector> {
+	
+	private final IngredientManager ingredientManager;
+	private final ArrayList<ITypedIngredient<?>> collectedIngredients = new ArrayList<>();
+	
+	public TMRVIngredientCollector(IngredientManager ingredientManager) {
+		this.ingredientManager = ingredientManager;
+	}
+	
+	public Stream<ITypedIngredient<?>> stream() {
+		return collectedIngredients.stream();
+	}
+	
+	public List<ITypedIngredient<?>> getCollectedIngredients() {
+		return stream().toList();
+	}
+	
+	public boolean isEmpty() {
+		return collectedIngredients.isEmpty();
+	}
+	
+	public List<EmiStack> getEMIStacks() {
+		return collectedIngredients.stream().map(ingredientManager::getEMIStack).toList();
+	}
+	
+	public EmiIngredient getEMIIngredient() {
+		return EmiIngredient.of(getEMIStacks());
+	}
+	
+	public EmiIngredient getEMIIngredient(Map<IIngredientType<?>, IIngredientRenderer<?>> rendererOverrides) {
+		return EmiIngredient.of(collectedIngredients.stream()
+			.map(typedIngredient -> {
+				final var type = typedIngredient.getType();
+				if (!rendererOverrides.containsKey(type))
+					return ingredientManager.getEMIStack(typedIngredient);
+				
+				//noinspection rawtypes
+				return TMRVStack.create((IIngredientType) type, (IIngredientHelper) ingredientManager.getIngredientHelper(type), (IIngredientRenderer) rendererOverrides.get(type), typedIngredient.getIngredient());
+			})
+			.toList());
+	}
+	
+	public void copy(TMRVIngredientCollector other) {
+		collectedIngredients.addAll(other.collectedIngredients);
+	}
+	
+	private TMRVIngredientCollector addEMIStack(EmiStack emiStack) {
+		if (emiStack instanceof ITypedIngredient<?> typedIngredient) {
+			collectedIngredients.add(typedIngredient);
+		} else {
+			collectedIngredients.add(ErrorIngredient.TYPED_INSTANCE);
+		}
+		
+		return this;
+	}
+	
+	//region IIngredientAcceptor
+	@Override
+	public <I> TMRVIngredientCollector addIngredient(IIngredientType<I> type, I ingredient) {
+		if (type == VanillaTypes.ITEM_STACK) {
+			if (ingredient instanceof ItemStack itemStack)
+				collectedIngredients.add(TypedItemStack.create(itemStack));
+			else
+				collectedIngredients.add(ErrorIngredient.TYPED_INSTANCE);
+		} else {
+			final var typedIngredient = TypedIngredient.createAndFilterInvalid(ingredientManager, type, ingredient, false);
+			collectedIngredients.add(typedIngredient != null ? typedIngredient : ErrorIngredient.TYPED_INSTANCE);
+		}
+		
+		return this;
+	}
+	
+	@Override
+	public <I> TMRVIngredientCollector addIngredients(IIngredientType<I> type, List<@Nullable I> ingredients) {
+		for (final var ingredient : ingredients) {
+			addIngredient(type, ingredient);
+		}
+		
+		return this;
+	}
+	
+	@Override
+	public TMRVIngredientCollector addIngredientsUnsafe(List<?> ingredients) {
+		for (final var ingredient : ingredients) {
+			final var type = ingredientManager.getIngredientType(ingredient);
+			if (type != null)
+				collectedIngredients.add(TypedIngredient.createUnvalidated(type, ingredient));
+			else
+				collectedIngredients.add(ErrorIngredient.TYPED_INSTANCE);
+		}
+		
+		return this;
+	}
+	
+	@Override
+	public <I> TMRVIngredientCollector addTypedIngredient(ITypedIngredient<I> typedIngredient) {
+		if (typedIngredient == null) {
+			collectedIngredients.add(ErrorIngredient.TYPED_INSTANCE);
+		} else if (typedIngredient instanceof IStackish<?>) {
+			collectedIngredients.add(typedIngredient);
+		} else {
+			final var copy = TypedIngredient.defensivelyCopyTypedIngredientFromApi(ingredientManager, typedIngredient);
+			collectedIngredients.add(copy != null ? copy : ErrorIngredient.TYPED_INSTANCE);
+		}
+		
+		return this;
+	}
+	
+	@Override
+	public TMRVIngredientCollector addTypedIngredients(List<ITypedIngredient<?>> typedIngredients) {
+		for (final var typedIngredient : typedIngredients) {
+			addTypedIngredient(typedIngredient);
+		}
+		
+		return this;
+	}
+	
+	@Override
+	public TMRVIngredientCollector addOptionalTypedIngredients(List<Optional<ITypedIngredient<?>>> typedIngredients) {
+		typedIngredients.stream()
+			.map(x -> x.orElse(null))
+			.forEach(this::addTypedIngredient);
+		
+		return this;
+	}
+	
+	@Override
+	public IIngredientConsumer addItemLike(ItemLike itemLike) {
+		return addEMIStack(ingredientManager.getEMIStack(itemLike));
+	}
+	
+	@Override
+	public TMRVIngredientCollector addFluidStack(Fluid fluid) {
+		return addEMIStack(FluidEmiStack.of(fluid));
+	}
+	
+	@Override
+	public TMRVIngredientCollector addFluidStack(Fluid fluid, long amount) {
+		return addEMIStack(FluidEmiStack.of(fluid, amount));
+	}
+	
+	@Override
+	public TMRVIngredientCollector addFluidStack(Fluid fluid, long amount, DataComponentPatch dataComponentPatch) {
+		return addEMIStack(FluidEmiStack.of(fluid, dataComponentPatch, amount));
+	}
+	//endregion
+	
+}

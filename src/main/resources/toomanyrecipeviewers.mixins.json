@@ -1,0 +1,29 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.nolij.toomanyrecipeviewers.mixin",
+	"compatibilityLevel": "JAVA_${mixin_java_version}",
+	"mixins": [],
+	"client": [
+		"CraftingRecipeCategoryAccessor",
+		"EmiAgnosMixin",
+		"EmiRecipesMixin",
+		"EmiReloadManager_ReloadWorkerMixin",
+		"ExtendableRecipeCategoryHelperMixin",
+		"FluidEmiStackMixin",
+		"FullTypedItemStackMixin",
+		"ItemEmiStackMixin",
+		"JemiUtilMixin",
+		"MekanismJEIMixin",
+		"NormalizedTypedItemMixin",
+		"NormalizedTypedItemStackMixin",
+		"PacketRecipeTransferAccessor",
+		"SmithingRecipeCategoryAccessor",
+		"TMRVStackMixin",
+		"TypedIngredientMixin",
+		"TypedItemStackMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

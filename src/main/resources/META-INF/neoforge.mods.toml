@@ -1,0 +1,45 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "OSL-3.0"
+issueTrackerURL = "${issue_url}"
+
+[[mods]]
+modId = "toomanyrecipeviewers"
+version = "${mod_version}"
+displayName = "${mod_name}"
+displayURL = "${mod_url}"
+logoFile = "icon.png"
+authors = "${authors}"
+description = """
+${mod_description}
+"""
+
+[[dependencies.toomanyrecipeviewers]]
+modId = "${mod_loader}"
+type = "required"
+mandatory = true
+versionRange = "${mod_loader_range}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.toomanyrecipeviewers]]
+modId = "minecraft"
+type = "required"
+mandatory = true
+versionRange = "${minecraft_range}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.toomanyrecipeviewers]]
+modId = "emi"
+type = "required"
+mandatory = true
+versionRange = "${emi_range}"
+ordering = "NONE"
+side = "CLIENT"
+
+[[mods]]
+modId = "jei"
+version = "${jei_version}"
+displayName = "TMRV JEI Stub"
+description = "Provides JEI for mods that require JEI"

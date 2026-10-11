@@ -1,0 +1,410 @@
+import org.taumc.gradle.compression.DeflateAlgorithm
+import org.taumc.gradle.compression.task.AdvzipTask
+import org.taumc.gradle.minecraft.MinecraftVersion
+import org.taumc.gradle.minecraft.ModEnvironment
+import org.taumc.gradle.minecraft.ModLoader
+import org.taumc.gradle.publishing.api.artifact.Relation
+import org.taumc.gradle.publishing.publishing
+import xyz.wagyourtail.unimined.api.minecraft.task.RemapJarTask
+import xyz.wagyourtail.unimined.api.unimined
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+plugins {
+	id("java")
+	id("idea")
+	id("maven-publish")
+	id("com.gradleup.shadow")
+	id("xyz.wagyourtail.unimined")
+	id("com.github.gmazzo.buildconfig")
+	id("org.taumc.gradle.versioning")
+	id("org.taumc.gradle.compression")
+	id("xyz.wagyourtail.jvmdowngrader")
+}
+
+operator fun String.invoke(): String = project.properties[this] as? String ?: error("Property $this not found")
+
+idea.module {
+	isDownloadJavadoc = true
+	isDownloadSources = true
+}
+
+val minecraftVersion = MinecraftVersion.get("minecraft_version"()) ?: error("Invalid `minecraft_version`!")
+val modLoader = ModLoader.get("mod_loader"()) ?: error("Invalid `mod_loader`!")
+val javaVersion = JavaVersion.valueOf("java_version"())
+
+project.group = "maven_group"()
+project.version = tau.versioning.subVersion("mc.${minecraftVersion.conciseName}")
+
+println("TooManyRecipeViewers version: ${project.version}")
+
+buildConfig {
+	className("TooManyRecipeViewersConstants")
+	packageName("dev.nolij.toomanyrecipeviewers")
+
+	useJavaOutput()
+
+	buildConfigField("MOD_ID", "mod_id"())
+}
+
+base {
+	archivesName = "mod_id"()
+}
+
+repositories {
+	maven("https://repo.spongepowered.org/maven")
+	maven("https://jitpack.io/")
+	exclusiveContent {
+		forRepository { maven("https://api.modrinth.com/maven") }
+		filter {
+			includeGroup("maven.modrinth")
+		}
+	}
+	exclusiveContent {
+		forRepository { maven("https://cursemaven.com") }
+		filter {
+			includeGroup("curse.maven")
+		}
+	}
+	maven("https://maven.blamejared.com")
+	maven("https://maven.taumc.org/releases")
+	maven("https://maven.teamresourceful.com/repository/TerrarformerMC/")
+	maven("https://maven.parchmentmc.org")
+	maven("https://modmaven.dev/")
+	mavenCentral()
+	maven("https://central.sonatype.com/repository/maven-snapshots/")
+//	maven("https://maven.createmod.net/")
+//	maven("https://maven.architectury.dev/")
+//	maven("https://maven.squiddev.cc/")
+//	maven("https://maven.ithundxr.dev/snapshots")
+//	maven("https://maven.ftb.dev/releases")
+//	maven("https://maven.theillusivec4.top/")
+}
+
+dependencies {
+	compileOnly("org.jetbrains:annotations:${"jetbrains_annotations_version"()}")
+	
+	compileOnly("systems.manifold:manifold-rt:${"manifold_version"()}")
+	annotationProcessor("systems.manifold:manifold-exceptions:${"manifold_version"()}")
+}
+
+tasks.withType<JavaCompile> {
+	if (name !in arrayOf("compileMcLauncherJava", "compilePatchedMcJava")) {
+		options.encoding = "UTF-8"
+		sourceCompatibility = "25"
+		options.release = 25
+		javaCompiler = javaToolchains.compilerFor {
+			languageVersion = JavaLanguageVersion.of(25)
+		}
+		options.compilerArgs.addAll(arrayOf("-Xplugin:Manifold no-bootstrap"))
+		options.forkOptions.jvmArgs?.add("-XX:+EnableDynamicAgentLoading")
+	}
+}
+
+tasks.processResources {
+	inputs.file(rootDir.resolve("gradle.properties"))
+	inputs.property("version", tau.versioning.version)
+	inputs.property("mod_loader", modLoader.commonName)
+
+	filteringCharset = "UTF-8"
+
+	val props = mutableMapOf<String, String>()
+	props.putAll(project.properties
+		.filterValues { value -> value is String }
+		.mapValues { entry -> entry.value as String })
+	props["mod_version"] = tau.versioning.version
+	props["mod_loader"] = modLoader.commonName
+	props["mixin_java_version"] = (project.properties["java_version"] as String).replace("VERSION_", "")
+
+	filesMatching(listOf("fabric.mod.json", "mcmod.info", "META-INF/mods.toml", "META-INF/neoforge.mods.toml", "*.mixins.json")) {
+		expand(props)
+	}
+
+	if (modLoader != ModLoader.LEXFORGE) {
+		exclude("pack.mcmeta")
+	}
+
+	doLast {
+		if (modLoader == ModLoader.LEXFORGE || (modLoader == ModLoader.NEOFORGE && minecraftVersion < "20.5")) {
+			fileTree(mapOf("dir" to tasks.processResources.get().outputs.files.asPath, "include" to "META-INF/neoforge.mods.toml")).onEach { file ->
+				Files.copy(file.toPath(), kotlin.io.path.Path(outputs.files.asPath).resolve("META-INF/mods.toml"), StandardCopyOption.REPLACE_EXISTING)
+				file.delete()
+			}
+		}
+	}
+}
+
+tasks.withType<AbstractArchiveTask>().configureEach {
+	isPreserveFileTimestamps = false
+	isReproducibleFileOrder = true
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	
+	// TODO: yell at wyt to fix Unimined
+	includeEmptyDirs = false
+	exclude("assets/minecraft/textures/**")
+}
+
+tasks.withType<GenerateModuleMetadata> {
+	enabled = false
+}
+
+val shade: Configuration by configurations.creating {
+	configurations.compileClasspath.get().extendsFrom(this)
+	configurations.runtimeClasspath.get().extendsFrom(this)
+}
+
+val modRuntimeOnly: Configuration by configurations.creating {
+	configurations.runtimeClasspath.get().extendsFrom(this)
+}
+
+if (minecraftVersion < "20.5") {
+	configurations.configureEach {
+		resolutionStrategy.eachDependency {
+			if (requested.group == "org.lwjgl" && requested.version?.startsWith("3.") == true) {
+				useVersion("3.3.2")
+				because("compatible with Java 25")
+			}
+		}
+	}
+}
+
+unimined.minecraft {
+	version(minecraftVersion.mojangName)
+
+	runs {
+		config("client") {
+			javaVersion = JavaVersion.VERSION_25
+			jvmArgs("-Xmx4G")
+		}
+	}
+
+	when (modLoader) {
+		ModLoader.NEOFORGE -> {
+			neoForge {
+				loader("mod_loader_version"())
+				mixinConfig("toomanyrecipeviewers.mixins.json")
+//				accessTransformer = file("src/main/resources/META-INF/accesstransformer.cfg")
+			}
+		}
+		ModLoader.LEXFORGE -> {
+			minecraftForge {
+				loader("mod_loader_version"())
+				mixinConfig("toomanyrecipeviewers.mixins.json")
+//				accessTransformer = file("src/main/resources/META-INF/accesstransformer.cfg")
+			}
+		}
+		else -> error("Invalid `mod_loader`!")
+	}
+
+	mappings {
+		mojmap()
+		parchment(mcVersion = minecraftVersion.mojangName, version = "parchment_version"())
+	}
+	
+	if (modLoader == ModLoader.LEXFORGE) {
+		mods {
+			remap(modRuntimeOnly)
+		}
+	}
+}
+
+dependencies {
+	val minecraftLibraries by configurations.getting
+	minecraftLibraries.isTransitive = true
+	val modImplementation by configurations.getting
+	val include by configurations.getting
+
+	shade("dev.nolij:libnolij:${"libnolij_version"()}")
+	minecraftLibraries("dev.nolij:libnolij:${"libnolij_version"()}")
+
+	shade("dev.nolij:zson:${"zson_version"()}")
+	minecraftLibraries("dev.nolij:zson:${"zson_version"()}")
+	
+	if (minecraftVersion >= "20.2")
+		implementation("dev.emi:emi-${modLoader.commonName}:${"emi_version"()}")
+	else
+		modImplementation("dev.emi:emi-${modLoader.commonName}:${"emi_version"()}")
+	
+	shade(project(stonecutter.node.sibling("jei-api")!!.project.path, configuration = "jeiAPIJar")) { isTransitive = false }
+	
+	// for testing purposes
+	if (minecraftVersion.equals("21.1") && modLoader == ModLoader.NEOFORGE) {
+		runtimeOnly("maven.modrinth:just-enough-professions-jep:4.0.3")
+		runtimeOnly("maven.modrinth:justenoughbreeding:mxmXy9Cs")
+		runtimeOnly("maven.modrinth:just-enough-effect-descriptions-jeed:m7gSD9ey")
+		runtimeOnly("maven.modrinth:mekanism:10.7.19.85")
+		runtimeOnly("maven.modrinth:mekanism-generators:10.7.19.85")
+		runtimeOnly("maven.modrinth:mekanism-additions:10.7.19.85")
+		runtimeOnly("maven.modrinth:mekanism-tools:10.7.19.85")
+		runtimeOnly("maven.modrinth:mekanism_extra:1.21.1-1.4.0")
+		runtimeOnly("curse.maven:mekanism-weapons-929829:6918569")
+//		runtimeOnly("curse.maven:just-enough-mekanism-multiblocks-898746:7921149")
+		runtimeOnly("curse.maven:actually-additions-228404:7676502")
+		runtimeOnly("curse.maven:placebo-283644:6068449")
+		runtimeOnly("curse.maven:apotheosis-313970:6078226")
+		runtimeOnly("curse.maven:apothic-attributes-898963:6060907")
+		runtimeOnly("curse.maven:apothic-enchanting-1063926:6084297")
+		runtimeOnly("curse.maven:apothic-spawners-986583:6058055")
+		runtimeOnly("maven.modrinth:c2me-neoforge:0.3.0+alpha.0.47+1.21.1")
+		runtimeOnly("curse.maven:sophisticated-core-618298:8084486")
+		runtimeOnly("curse.maven:sophisticated-storage-619320:8084562")
+		runtimeOnly("curse.maven:sophisticated-backpacks-422301:8084526")
+		runtimeOnly("curse.maven:sophisticated-storage-in-motion-1166930:8084593")
+		runtimeOnly("curse.maven:moderately-enough-effect-descriptions-meed-918638:6100615")
+		runtimeOnly("curse.maven:geckolib-388172:7707149")
+		runtimeOnly("maven.modrinth:curios:9.2.2+1.21.1")
+		runtimeOnly("curse.maven:ars-nouveau-401955:6228434")
+		runtimeOnly("curse.maven:polymorph-388800:5995380")
+		runtimeOnly("curse.maven:laserio-626839:5730007")
+		runtimeOnly("curse.maven:chipped-456956:5813117")
+		runtimeOnly("curse.maven:resourceful-lib-570073:5793500")
+		runtimeOnly("curse.maven:athena-841890:5629395")
+		runtimeOnly("curse.maven:farmers-delight-398521:8083481")
+		runtimeOnly("curse.maven:fruits-delight-943774:6095147")
+		runtimeOnly("curse.maven:puzzles-lib-495476:6095894")
+		runtimeOnly("curse.maven:visual-workbench-500273:5714956")
+		runtimeOnly("curse.maven:immersive-engineering-231951:5828000")
+		runtimeOnly("curse.maven:guideme-1173950:6223759")
+		runtimeOnly("curse.maven:applied-energistics-2-223794:6225422")
+		runtimeOnly("curse.maven:ae2-jei-integration-1074338:5748513")
+		runtimeOnly("curse.maven:blockui-522992:7790469")
+		runtimeOnly("curse.maven:domum-ornamentum-527361:7812603")
+		runtimeOnly("curse.maven:multi-piston-303278:5783614")
+		runtimeOnly("curse.maven:structurize-298744:8103320")
+		runtimeOnly("curse.maven:towntalk-900364:5653504")
+		runtimeOnly("curse.maven:minecolonies-245506:7966867")
+		runtimeOnly("curse.maven:playeranimator-658587:6024462")
+		runtimeOnly("curse.maven:irons-lib-1492763:7907336")
+		runtimeOnly("curse.maven:irons-spells-n-spellbooks-855414:7907341")
+//		runtimeOnly("maven.modrinth:jei-multiblocks:1.21.1-1.0.4")
+		runtimeOnly("curse.maven:just-dire-things-1002348:6369120")
+		runtimeOnly("curse.maven:fusion-connected-textures-854949:7471474")
+		runtimeOnly("curse.maven:supermartijn642s-core-lib-454372:7783425")
+		runtimeOnly("curse.maven:supermartijn642s-config-lib-438332:5546996")
+		runtimeOnly("curse.maven:rechiseled-558998:7687594")
+		runtimeOnly("maven.modrinth:kotlin-for-forge:5.10.0")
+		runtimeOnly("maven.modrinth:more-enchantment-info:46MhKH74")
+		runtimeOnly("curse.maven:itemzoom-261725:5536959")
+		runtimeOnly("curse.maven:mekagenjei-mekanism-generator-addon-1347827:7224975")
+		runtimeOnly("curse.maven:reliquary-reincarnations-241319:8054285")
+		runtimeOnly("curse.maven:pneumaticcraft-repressurized-281849:8062194")
+		runtimeOnly("curse.maven:lets-do-vinery-704465:7539914")
+		runtimeOnly("curse.maven:lets-do-herbal-brews-951221:7657017")
+		runtimeOnly("curse.maven:lets-do-farm-charm-1038103:7959521")
+		runtimeOnly("curse.maven:lets-do-brewery-farm-charm-compat-1038106:7830639")
+		runtimeOnly("curse.maven:architectury-api-419699:5786327")
+		runtimeOnly("curse.maven:extra-mod-integrations-739970:6939681")
+//		runtimeOnly("com.simibubi.create:create-1.21.1:6.0.9-184")
+	} else if (minecraftVersion.equals("20.1") && modLoader == ModLoader.LEXFORGE) {
+		compileOnly("io.github.llamalad7:mixinextras-common:${"mixinextras_version"()}")
+		include("io.github.llamalad7:mixinextras-forge:${"mixinextras_version"()}")
+		implementation("io.github.llamalad7:mixinextras-forge:${"mixinextras_version"()}")
+
+		modRuntimeOnly("curse.maven:actually-subtractions-1083685:6223947")
+//		modRuntimeOnly("curse.maven:ender-io-64578:6274905")
+		modRuntimeOnly("curse.maven:puzzles-lib-495476:6387081")
+		modRuntimeOnly("curse.maven:visual-workbench-500273:4612695")
+//		modRuntimeOnly("curse.maven:mantle-74924:6258424")
+//		modRuntimeOnly("curse.maven:tinkers-construct-74072:6266282")
+		modRuntimeOnly("curse.maven:fusion-connected-textures-854949:6453794")
+		modRuntimeOnly("curse.maven:supermartijn642s-core-lib-454372:6034718")
+		modRuntimeOnly("curse.maven:supermartijn642s-config-lib-438332:4715408")
+//		modRuntimeOnly("curse.maven:rechiseled-558998:5286306")
+//		modRuntimeOnly("curse.maven:the-twilight-forest-227639:5468648")
+//		modRuntimeOnly("curse.maven:tcintegrations-602680:6618094")
+//		modRuntimeOnly("curse.maven:farmers-delight-398521:6597298")
+//		modRuntimeOnly("curse.maven:fruits-delight-943774:6500940")
+		modRuntimeOnly("maven.modrinth:kotlin-for-forge:4.11.0")
+		modRuntimeOnly("maven.modrinth:more-enchantment-info:wdzLMJrS")
+//		modRuntimeOnly("net.createmod.ponder:Ponder-Forge-${minecraftVersion.mojangName}:1.0.92")
+//		modRuntimeOnly("dev.engine-room.flywheel:flywheel-forge-${minecraftVersion.mojangName}:1.0.5")
+//		modRuntimeOnly("curse.maven:create-328085:7178761")
+//		modRuntimeOnly("maven.modrinth:petrolpark:1.20.1-1.4.22")
+//		modRuntimeOnly("maven.modrinth:destroy:1.20.1-0.1.3")
+		modRuntimeOnly("curse.maven:mekanism-268560:6552911")
+		modRuntimeOnly("curse.maven:architectury-api-419699:5137938")
+		modRuntimeOnly("curse.maven:rhino-416294:6186971")
+		modRuntimeOnly("curse.maven:kubejs-238086:5853326")
+	}
+}
+
+val sourcesJar by tasks.registering(Jar::class) {
+	group = "build"
+
+	archiveClassifier = "sources"
+
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_${"mod_id"()}" }
+	}
+
+	listOf(project.sourceSets, stonecutter.node.sibling("jei-api")!!.project.sourceSets).flatten().forEach {
+		from(it.allSource) { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+	}
+}
+
+tasks.shadowJar {
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_${"mod_id"()}" }
+	}
+	
+	exclude("mezz/jei/common/platform/JEIAPIStub.class")
+
+	configurations = listOf(shade)
+	archiveClassifier = "unremapped"
+
+	relocate("dev.nolij.libnolij", "dev.nolij.toomanyrecipeviewers.libnolij")
+	relocate("dev.nolij.zson", "dev.nolij.toomanyrecipeviewers.zson")
+}
+
+tasks.named<RemapJarTask>("remapJar") {
+	inputFile.set(tasks.shadowJar.get().archiveFile)
+
+	asJar.archiveClassifier = "remapped"
+
+	mixinRemap {
+		enableMixinExtra()
+	}
+}
+val inputJar = tasks.getByName("remapJar") as AbstractArchiveTask
+
+val compressionInputJar = if (javaVersion.ordinal < JavaVersion.VERSION_25.ordinal) {
+	jvmdg.defaultTask {
+		inputFile = inputJar.archiveFile
+		downgradeTo = javaVersion
+	}
+
+	jvmdg.defaultShadeTask.get()!!
+} else {
+	inputJar
+}
+
+// Cannot use CompressionExtension.compress because the finalizedBy/dependency logic makes chiseled builds deadlock
+val compressJar = tasks.register<AdvzipTask>("compressJar") {
+	inputJar = compressionInputJar.archiveFile
+	destinationDirectory = compressionInputJar.destinationDirectory
+	level = DeflateAlgorithm.EXTRA
+	throwIfNotInstalled = tau.versioning.isRelease
+	archiveClassifier = ""
+	dependsOn(compressionInputJar)
+}
+
+val outputJar = compressJar
+
+tasks.assemble {
+	dependsOn(outputJar, sourcesJar)
+}
+
+rootProject.tau.publishing.modArtifact("${modLoader.displayName} ${minecraftVersion.conciseName}") {
+	files(provider { outputJar.get().archiveFile }, provider { sourcesJar.get().archiveFile })
+
+	version = tau.versioning.version
+
+	minecraftVersionRange = minecraftVersion.mojangName
+	javaVersions.add(javaVersion)
+
+	environment = ModEnvironment.CLIENT_ONLY
+	modLoaders.add(modLoader)
+
+	relations.add(Relation(id = "emi", type = Relation.Type.REQUIRES))
+	relations.add(Relation(id = "jei", type = Relation.Type.BREAKS))
+}
