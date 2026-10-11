@@ -32,24 +32,8 @@ tau.publishing.publish {
 		supportAllChannels()
 
 		accessToken = providers.environmentVariable("GITHUB_TOKEN")
-		repository = "Nolij/TooManyRecipeViewers"
+		repository = "taker99/TMRVReforged"
 		tagName = tau.versioning.releaseTag
-	}
-
-	curseforge {
-		supportChannels(PublishChannel.RELEASE)
-
-		accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
-		projectID = 1194921
-		projectSlug = "tmrv"
-	}
-	
-	modrinth {
-		supportChannels(PublishChannel.RELEASE)
-		
-		accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-		projectID = "yFypjcfd"
-		projectSlug = "tmrv"
 	}
 
 	val iconURL = "https://github.com/Nolij/TooManyRecipeViewers/raw/master/src/main/resources/icon.png"
@@ -60,7 +44,7 @@ tau.publishing.publish {
 		webhookURL = providers.environmentVariable("DISCORD_WEBHOOK")
 		avatarURL = iconURL
 
-		testBuildPreset(modName = "TooManyRecipeViewers", repoURL = "https://github.com/Nolij/TooManyRecipeViewers")
+		testBuildPreset(modName = "${"mod_name"()}", repoURL = "${"repo_url"()}")
 	}
 
 	discord {
@@ -69,7 +53,7 @@ tau.publishing.publish {
 		webhookURL = providers.environmentVariable("DISCORD_WEBHOOK")
 		avatarURL = iconURL
 
-		releasePreset(modName = "TooManyRecipeViewers")
+		releasePreset(modName = "${"mod_name"()}")
 	}
 }
 

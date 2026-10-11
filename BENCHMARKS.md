@@ -1,3 +1,7 @@
+# TMRVReforged: upstream benchmark reference
+
+The following benchmark record was inherited from the original TooManyRecipeViewers project. It measures upstream TMRV 0.9.0-rc.1, not TMRVReforged. Original version links, test instructions, and recorded logs are preserved as historical evidence.
+
 # System Details
 
 All benchmarks were performed in the following environment:

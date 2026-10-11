@@ -1,3 +1,10 @@
+## 9.0.8
+
+- Rename the fork to TMRVReforged and point project links to its own repository.
+
+- Include fork attribution and distribution instructions in binary and source artifacts.
+- Build a complete project source archive alongside each target's JAR.
+
 ## 9.0.7
 
 - Preserve amounts, probabilities, remainders, and comparisons when copying custom ingredient stacks.

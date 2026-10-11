@@ -62,7 +62,7 @@ buildConfig {
 }
 
 base {
-	archivesName = "mod_id"()
+	archivesName = "mod_name"()
 }
 
 repositories {
@@ -257,6 +257,7 @@ val sourcesJar by tasks.registering(Jar::class) {
 	group = "build"
 
 	archiveClassifier = "sources"
+	from(rootProject.files("ATTRIBUTION.md", "DISTRIBUTION.md"))
 
 	from(rootProject.file("LICENSE")) {
 		rename { "${it}_${"mod_id"()}" }
@@ -268,6 +269,7 @@ val sourcesJar by tasks.registering(Jar::class) {
 }
 
 tasks.shadowJar {
+	from(rootProject.files("ATTRIBUTION.md", "DISTRIBUTION.md"))
 	from(rootProject.file("LICENSE")) {
 		rename { "${it}_${"mod_id"()}" }
 	}
@@ -315,12 +317,23 @@ val compressJar = tasks.register<AdvzipTask>("compressJar") {
 
 val outputJar = compressJar
 
+val sourceArchive by tasks.registering(Zip::class) {
+	group = "build"
+	archiveClassifier = "source"
+	destinationDirectory = layout.buildDirectory.dir("libs")
+	from(rootDir) {
+		include("src/**", "jei-api/src/**", "jei-api/build.gradle.kts", "buildSrc/src/**", "buildSrc/*.gradle.kts", "buildSrc/gradle.properties", "gradle/**", "versions/*/*.properties", "tests/*.py", "scripts/**")
+		include("*.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat", "LICENSE", "ATTRIBUTION.md", "DISTRIBUTION.md", "README*.md", "CHANGELOG.md", "BENCHMARKS.md", "AGENTS.md")
+		exclude("**/build/**", "**/.gradle/**", "**/run/**", "**/logs/**")
+	}
+}
+
 tasks.assemble {
-	dependsOn(outputJar, sourcesJar)
+	dependsOn(outputJar, sourcesJar, sourceArchive)
 }
 
 rootProject.tau.publishing.modArtifact("${modLoader.displayName} ${minecraftVersion.conciseName}") {
-	files(provider { outputJar.get().archiveFile }, provider { sourcesJar.get().archiveFile })
+	files(provider { outputJar.get().archiveFile }, provider { sourcesJar.get().archiveFile }, provider { sourceArchive.get().archiveFile })
 
 	version = project.version.toString()
 

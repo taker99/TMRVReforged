@@ -2,7 +2,7 @@
 
 ## Projekt
 
-Dieses Repository enthält **TooManyRecipeViewers (TMRV)**, eine clientseitige
+Dieses Repository enthält **TMRVReforged**, eine clientseitige
 Kompatibilitätsschicht für JEI-Plugins unter EMI.
 
 Unterstützte Zielvarianten:
@@ -60,7 +60,7 @@ werden.
 
 ## Code
 
-- TMRV bleibt client-only; keine serverseitige Funktionalität ergänzen.
+- TMRVReforged bleibt client-only; keine serverseitige Funktionalität ergänzen.
 - JEI-/EMI-Kompatibilität und beide Loader-Zweige müssen erhalten bleiben.
 - Offizielle `mezz.jei...`-Paketnamen im gebündelten JEI-API-Stubs nicht umbenennen.
 - Mixin-Klassen und Stonecutter-Kompatibilitätsblöcke nur mit gleicher

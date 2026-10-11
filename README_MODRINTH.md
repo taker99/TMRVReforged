@@ -1,46 +1,50 @@
 # IMPORTANT LICENSE NOTICE
 
-By using this project in any form, you hereby give your "express assent" for the terms of the license of this project (see [License](#license)), and acknowledge that I (the author of this project) have fulfilled my obligation under the license to "make a reasonable effort under the circumstances to obtain the express assent of recipients to the terms of this License".
+TMRVReforged is a modified fork of TooManyRecipeViewers, originally written by Nolij and the Craftoria team. It is licensed under OSL-3.0. Read the accompanying LICENSE and explicitly accept its terms before obtaining this fork. Distributors must make a reasonable effort to obtain recipients' express assent; use alone is not evidence of express assent.
 
-# TooManyRecipeViewers
+See ATTRIBUTION.md for the modification notice and DISTRIBUTION.md for source delivery and redistribution requirements. The source repository for this fork is [https://github.com/taker99/TMRVReforged](https://github.com/taker99/TMRVReforged). Every distributed binary must have its matching source available there or be accompanied by the complete matching source archive.
 
-**T**oo**M**any**R**ecipe**V**iewers (or TMRV) is a compatibility layer for running [JEI](https://modrinth.com/mod/jei) plugins with [EMI](https://modrinth.com/mod/emi) **without** having to install [JEI](https://modrinth.com/mod/jei), written by Nolij.
+# TMRVReforged
+
+**TMRVReforged** is a compatibility layer for running [JEI](https://modrinth.com/mod/jei) plugins with [EMI](https://modrinth.com/mod/emi) **without** having to install [JEI](https://modrinth.com/mod/jei), maintained by taker99 and based on the original project by Nolij and the Craftoria team.
 
 You'll need EMI installed to use this mod.
 
-# Why use TMRV over EMI+JEI (AKA JEMI)?
+# Why use TMRVReforged over EMI+JEI (AKA JEMI)?
 
 JEMI is a compatibility layer built-in to EMI to get JEI plugins _mostly_ working with EMI by heavily relying on the JEI internals. It is designed to be as simplistic as possible and relies on JEI to process recipe data first before it is imported to EMI.
 
-TMRV is not like JEMI - it aims to completely replace the JEI API (NOTE: TMRV does contain some unmodified JEI internals - see [JEI Code Re-Use](#jei-code-re-use)). TMRV (where feasible) replaces JEI APIs with direct mappers to EMI APIs instead of loading the whole JEI registry and querying it after the fact. This has several advantages, including more efficient use of system resources, but is also a tradeoff, as TMRV's approach makes maintenance far more involved than what JEMI requires. JEMI is intentionally designed this way to allow EMI development to be focused on improving EMI itself, which is an approach I fully support.
+TMRVReforged is not like JEMI - it aims to completely replace the JEI API (NOTE: TMRVReforged does contain some unmodified JEI internals - see [JEI Code Re-Use](#jei-code-re-use)). TMRVReforged (where feasible) replaces JEI APIs with direct mappers to EMI APIs instead of loading the whole JEI registry and querying it after the fact. This has several advantages, including more efficient use of system resources, but is also a tradeoff, as TMRVReforged's approach makes maintenance far more involved than what JEMI requires. JEMI is intentionally designed this way to allow EMI development to be focused on improving EMI itself, which is an approach I fully support.
 
-TL;DR: **TMRV is much more efficient than JEMI** at the cost of taking **much more effort** to maintain than JEMI does, and **nobody should expect EMI to put this amount of effort** in to supporting an API that was intentionally not referenced during design. Be happy EMI can even load JEI plugins out of the box to begin with - it still took a fair amount of effort.
+TL;DR: **TMRVReforged is much more efficient than JEMI** at the cost of taking **much more effort** to maintain than JEMI does, and **nobody should expect EMI to put this amount of effort** in to supporting an API that was intentionally not referenced during design. Be happy EMI can even load JEI plugins out of the box to begin with - it still took a fair amount of effort.
 
-That being said, TMRV has two primary advantages over JEMI:
+That being said, TMRVReforged has two primary advantages over JEMI:
 
 ### 1. Plugin Compatibility
 
-TMRV has better coverage of JEI's API than JEMI does (with one exception - see [Known API Limitations](#known-api-limitations)). As of writing, this includes:
+TMRVReforged has better coverage of JEI's API than JEMI does (with one exception - see [Known API Limitations](#known-api-limitations)). As of writing, this includes:
 
-- Better conversion of built-in recipe types (JEMI only supports crafting and info recipe types; TMRV supports all built-in JEI recipe types)
+- Better conversion of built-in recipe types (JEMI only supports crafting and info recipe types; TMRVReforged supports all built-in JEI recipe types)
 - Ingredient/search alias support
 - `createRecipeExtras` support
 
 ### 2. Efficiency
 
-With TMRV, you will always load in to the world faster than with JEMI. This is because JEI plugin initialization blocks world load - you can't start playing until all JEI plugins are initialized. EMI loads plugins asynchronously _after_ the world is loaded.
+With TMRVReforged, you will always load in to the world faster than with JEMI. This is because JEI plugin initialization blocks world load - you can't start playing until all JEI plugins are initialized. EMI loads plugins asynchronously _after_ the world is loaded.
 
-This means that even if TMRV loaded JEI plugins _slower_ than JEI does (not the case, it loads them measurably faster - see [benchmarks](#benchmarks)), worlds will _always_ load faster with TMRV than with JEMI.
+This means that even if TMRVReforged loaded JEI plugins _slower_ than JEI does (not the case, it loads them measurably faster - see [benchmarks](#benchmarks)), worlds will _always_ load faster with TMRVReforged than with JEMI.
 
-As already mentioned, TMRV replaces much of the JEI APIs with mappers to the corresponding EMI APIs - this means entire parts of the JEI internals can be outright removed. There's no need to initialize and store a whole JEI recipe registry - TMRV just converts JEI API calls to EMI ones, and converts the responses to the JEI format. Think of TMRV like Wine or Proton, and JEMI like a VM. JEMI uses real JEI, so there will be some scenarios where TMRV will error where JEMI won't (note that this doesn't necessarily mean that JEMI properly supports a scenario, it just means it looks like it does), but TMRV will generally be more efficient than JEMI.
+As already mentioned, TMRVReforged replaces much of the JEI APIs with mappers to the corresponding EMI APIs - this means entire parts of the JEI internals can be outright removed. There's no need to initialize and store a whole JEI recipe registry - TMRVReforged just converts JEI API calls to EMI ones, and converts the responses to the JEI format. Think of TMRVReforged like Wine or Proton, and JEMI like a VM. JEMI uses real JEI, so there will be some scenarios where TMRVReforged will error where JEMI won't (note that this doesn't necessarily mean that JEMI properly supports a scenario, it just means it looks like it does), but TMRVReforged will generally be more efficient than JEMI.
 
 # Benchmarks
 
-The full results and steps followed to obtain them are documented in [BENCHMARKS.md](https://github.com/Nolij/TooManyRecipeViewers/raw/master/BENCHMARKS.md). These results were not cherry-picked. The instructions were followed exactly as documented in that file. I encourage the community to verify them.
+These are historical results for the original TooManyRecipeViewers 0.9.0-rc.1, not measurements of TMRVReforged. See BENCHMARKS.md for the original test setup and logs.
+
+The full results and steps followed to obtain them are documented in [BENCHMARKS.md](https://github.com/taker99/TMRVReforged/blob/HEAD/BENCHMARKS.md). These results were not cherry-picked. The instructions were followed exactly as documented in that file. I encourage the community to verify them.
 
 ### Load Times
 
-|                 | TMRV                                                    | JEMI                                                         | Comparison                                                     |
+|                 | Upstream TMRV                                                    | JEMI                                                         | Comparison                                                     |
 |-----------------|---------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------|
 | Craftoria       | 1582ms (5ms before world load, 1577ms after world load) | 11036ms (10000ms before world load, 1036ms after world load) | -9454ms (-9995ms before world load, +541ms after world load)   |
 | ATM10           | 4951ms (3ms before world load, 4948ms after world load) | 20132ms (15550ms before world load, 4582ms after world load) | -15181ms (-15547ms before world load, +366ms after world load) |
@@ -48,7 +52,7 @@ The full results and steps followed to obtain them are documented in [BENCHMARKS
 
 ### Memory Usage
 
-|                 | TMRV      | JEMI      | Comparison               |
+|                 | Upstream TMRV      | JEMI      | Comparison               |
 |-----------------|-----------|-----------|--------------------------|
 | Craftoria       | 4.278 GiB | 4.386 GiB | -110.6 MiB (approximate) |
 | ATM10           | 4.401 GiB | 5.273 GiB | -892.9 MiB (approximate) |
@@ -58,13 +62,13 @@ The full results and steps followed to obtain them are documented in [BENCHMARKS
 
 ### JEI Config Files
 
-`.minecraft/config/jei/blacklist.json` is the only JEI config file that TMRV even reads. This file _should_ work fine for vanilla ingredient types and for modded ingredient types added by a JEI plugin (this does not include mods that support both JEI and EMI natively, such as Mekanism). This is meant to be a stop-gap for packs switching over from JEI. JEMI had a similar flaw. EMI has its own config for hiding ingredients - please use that instead. All other JEI config files are completely ignored by TMRV, and there are no plans to support them.
+`.minecraft/config/jei/blacklist.json` is the only JEI config file that TMRVReforged even reads. This file _should_ work fine for vanilla ingredient types and for modded ingredient types added by a JEI plugin (this does not include mods that support both JEI and EMI natively, such as Mekanism). This is meant to be a stop-gap for packs switching over from JEI. JEMI had a similar flaw. EMI has its own config for hiding ingredients - please use that instead. All other JEI config files are completely ignored by TMRVReforged, and there are no plans to support them.
 
 ### Recipe Manager Plugins
 
 The JEI API supports "Recipe Manager Plugins". These plugins allow mods to control their own recipe registries and handle recipe lookups themselves at runtime.
 
-TMRV will attempt to extract recipes from these plugins, but this does not work for most plugins, and by no means provides proper support for the feature. Support beyond this is not planned. Recipe Manager plugins are an outdated concept that very few plugins still use, and they aren't possible to properly support without very invasive EMI mixins - something I do not intend to use in this project.
+TMRVReforged will attempt to extract recipes from these plugins, but this does not work for most plugins, and by no means provides proper support for the feature. Support beyond this is not planned. Recipe Manager plugins are an outdated concept that very few plugins still use, and they aren't possible to properly support without very invasive EMI mixins - something I do not intend to use in this project.
 
 ### Runtime Registry Changes
 
@@ -72,13 +76,13 @@ The JEI API supports modifying the recipe and ingredient registries at runtime (
 
 # JEI Code Re-use
 
-The plan is to replace more of the JEI internals in future updates. However, some parts of JEI simply aren't worth re-implementing for various reasons. Regardless, enough of JEI has already been replaced in TMRV that I can confidently say:
+The plan is to replace more of the JEI internals in future updates. However, some parts of JEI simply aren't worth re-implementing for various reasons. Regardless, enough of JEI has already been replaced in TMRVReforged that I can confidently say:
 
 1. It wouldn't be feasible to achieve the same improvements over JEMI with mixins (at least sanely), and
 2. Enough of the JEI internals have been replaced or removed that I don't consider this unfair to JEI, especially given the fact that [JEI's license](https://github.com/mezz/JustEnoughItems/blob/d4ea796eb319efff2ff209f50c053c2a5a1dec05/LICENSE.txt) explicitly allows doing this.
 
 # License
 
-This project is licensed under OSL-3.0. For more information, see [LICENSE](https://github.com/Nolij/TooManyRecipeViewers/raw/master/LICENSE).
+This project is licensed under OSL-3.0. For more information, see [LICENSE](https://github.com/taker99/TMRVReforged/blob/HEAD/LICENSE).
 
 Some code was copied from [EMI](https://github.com/emilyploszaj/emi) and [JEI](https://github.com/mezz/JustEnoughItems) in compliance with their copyright licenses. All modifications present in this project are licensed under the same license as the rest of this project, OSL-3.0.
